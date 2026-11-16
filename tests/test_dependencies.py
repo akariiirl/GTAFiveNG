@@ -60,3 +60,33 @@ class DependencyTests(unittest.TestCase):
             (source/'pack.ydd.xml').write_text('<DrawableDictionary>'+drawable+'</DrawableDictionary>')
             target = run(source, root/'work', [0,0], 10, maps=False)
             self.assertEqual(json.loads((target/'build/conversion_report.json').read_text())['visual_instances'], 2)
+
+    def test_scoped_texture_packaging(self):
+        import json
+        import struct
+        from test_region import fixture
+        from region import run
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d); source = root/'source'; fixture(source)
+            header = bytearray(128); header[:4] = b'DDS '
+            struct.pack_into('<II',header,12,1,1)
+            struct.pack_into('<I',header,80,2); struct.pack_into('<I',header,88,8)
+            (source/'parent.dds').write_bytes(header + b'\x80')
+            (source/'other.dds').write_bytes(header + b'\xff')
+            drawable = (source/'toy.ydr.xml').read_text()
+            (source/'second.ydr.xml').write_text(drawable)
+            placement = (source/'toy.ymap.xml').read_text().replace('<archetypeName>absent</archetypeName>','<archetypeName>second</archetypeName>')
+            (source/'toy.ymap.xml').write_text(placement)
+            policy = {'scoped_textures':True, 'asset_txds':{'toy':'child','second':'other'},
+                      'txd_parents':{'child':'parent'},
+                      'textures':{'parent':{'missing_paint':'parent.dds'},'other':{'missing_paint':'other.dds'}}}
+            (source/'dependency-policy.json').write_text(json.dumps(policy))
+            target = run(source, root/'work', [0,0], 10, maps=False)
+            report = json.loads((target/'build/conversion_report.json').read_text())
+            self.assertEqual(report['missing_textures'], [])
+            self.assertEqual(report['textures'], 2)
+            materials = json.loads((target/'build/levels/los_santos_fazes/art/main.materials.json').read_text())
+            first = materials['lsf_toy_0']['Stages'][0]['diffuseMap']
+            second = materials['lsf_second_0']['Stages'][0]['diffuseMap']
+            self.assertNotEqual(first, second)
+            self.assertNotEqual((target/'build'/first.lstrip('/')).read_bytes(),(target/'build'/second.lstrip('/')).read_bytes())
