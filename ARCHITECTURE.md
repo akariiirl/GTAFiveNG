@@ -33,3 +33,9 @@ policy overrides YTYP fields; conflicting equal-priority YTYP dictionary definit
 remain unresolved. Parent dictionary traversal and source-relative texture targets
 prevent collisions between same-named textures. Extracting this policy from the
 installed game's active mount metadata remains deferred integration work.
+
+`selection.py` centralizes radius/bbox validation, membership and coordinate frame.
+`selection` in conversion reports is authoritative; legacy reports fall back to
+origin/radius. Box builds select whole placements, translate about the midpoint,
+and preserve the prior collision-by-visual-extent policy. Cache IDs distinguish
+boxes from circles even with equal centers and circumscribed radii.

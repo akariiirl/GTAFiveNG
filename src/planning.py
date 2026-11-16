@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from dependencies import resolve
+from selection import selection as normalize_selection, contains
 
 
 def chunk_id(x, y, size=256):
@@ -17,16 +18,7 @@ def chunk_id(x, y, size=256):
 def plan(source, *, bbox=None, center=None, radius=None, chunk_size=256):
     source = Path(source)
     chunk_id(0, 0, chunk_size)
-    if bbox is not None:
-        if center is not None or radius is not None or len(bbox) != 4 or not all(math.isfinite(v) for v in bbox) or bbox[0] > bbox[2] or bbox[1] > bbox[3]:
-            raise ValueError('Use an ordered finite bounding box or center/radius')
-        contains = lambda x,y: bbox[0] <= x <= bbox[2] and bbox[1] <= y <= bbox[3]
-        selection = {'bbox': list(map(float, bbox))}
-    else:
-        if center is None or len(center) != 2 or radius is None or not all(math.isfinite(v) for v in [*center, radius]) or radius <= 0:
-            raise ValueError('Finite center and positive radius required')
-        contains = lambda x,y: math.hypot(x-center[0], y-center[1]) <= radius
-        selection = {'center': list(map(float, center)), 'radius': float(radius)}
+    selection = normalize_selection(center,radius,bbox)
     resources, diagnostics = resolve(source)
     chunks = {}; graph = {}; placements = set()
     for path in sorted(source.glob('*.ymap.xml')):
@@ -37,7 +29,7 @@ def plan(source, *, bbox=None, center=None, radius=None, chunk_size=256):
             xyz = tuple(float(position.get(k, 0)) for k in 'xyz')
             if not all(math.isfinite(v) for v in xyz): raise ValueError('Nonfinite placement')
             name = item.findtext('archetypeName', '').lower()
-            if not contains(*xyz[:2]) or (name, xyz) in placements: continue
+            if not contains(selection,xyz[:2]) or (name, xyz) in placements: continue
             placements.add((name, xyz))
             key = chunk_id(*xyz[:2], chunk_size)
             chunks.setdefault(key, set()).add(name)

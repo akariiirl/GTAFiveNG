@@ -140,3 +140,14 @@ Windows CI initially exposed a short/long temp-path assertion mismatch in PR #7;
 the assertion now compares canonical paths and CI is rerunning. No game-derived
 texture metadata or appearance has been validated. This supersedes the earlier
 note that the scoped lookup API was not wired into conversion.
+
+### Issue #2 B follow-up — bounding-box conversion
+
+User reports 430 credits remaining after 17 used; 60-credit reserve means 370 above
+the reserve at that report. Tools still expose no live meter. Added shared region
+selection for planner, converter, cache IDs, progress statistics and comparisons.
+Bounding-box CLI now builds/packages/maps actual selected synthetic inputs. 28 tests
+pass locally, including inclusive edges, invalid/mixed selections, planner/map
+counts, box origin/size and cache reuse. Legacy radius calls/reports remain supported.
+Selection includes whole placed assets; no triangle clipping or gameplay validation.
+This supersedes the earlier limitation that bbox was planning-only.

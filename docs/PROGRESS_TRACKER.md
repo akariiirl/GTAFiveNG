@@ -38,3 +38,8 @@ names and dependency-resolution provenance. Existing three map PNGs are preserve
 `comparison.png` and `comparison.json` with counts, deltas, report hashes and whether
 region selections match. These counts are not a geographic coverage comparison;
 whole-island completion and verified driving area remain unknown.
+
+Bounding-box builds now use the same placement predicate for conversion and map
+statistics; report `selection.bbox` is authoritative. Old reports still use radius.
+Maps show actual exported geometry extending outside selection edges where whole
+placed assets cross the box; no geometric clipping or driving coverage is implied.

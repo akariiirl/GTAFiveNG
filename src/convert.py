@@ -4,6 +4,7 @@ import argparse, collections, hashlib, json, math, shutil, zipfile, struct, re
 import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
+from selection import selection, contains, frame
 from dependencies import resolve, TextureCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -216,10 +217,12 @@ def jsonl(path,rows):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(''.join(json.dumps(r,separators=(',',':'))+'\n' for r in rows))
 
-def build(source,output,center,radius):
+def build(source,output,center=None,radius=None,bbox=None):
+    config=selection(center,radius,bbox)
+    center,radius,region_size=frame(config)
     origin=np.array([center[0],center[1],0.]); level=output/'levels/los_santos_fazes'
     level.mkdir(parents=True,exist_ok=True)
-    report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'radius':radius,'in_game_verified':False}
+    report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'selection':config,'radius':radius,'in_game_verified':False}
     texture_catalog=TextureCatalog(source)
     drawables, report['dependency_resolution'] = resolve(source)
     materials={}; objects=[]; converted={}; used=set(); local_bounds={}
@@ -229,7 +232,7 @@ def build(source,output,center,radius):
         for e in ET.parse(p).getroot().findall('entities/Item'):
             if e.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
             pos=vec(e.find('position')); name=e.findtext('archetypeName'); key=(name,*pos)
-            if np.linalg.norm(pos[:2]-origin[:2])>radius or key in used: continue
+            if not contains(config,pos[:2]) or key in used: continue
             used.add(key)
             if name not in drawables: report['missing_assets'].add(name); continue
             if name not in converted:
@@ -268,7 +271,7 @@ def build(source,output,center,radius):
         data,repaired=normalized_dds(tex['path'].read_bytes())
         (td/tex.get('target',tex['path'].stem.lower()+'.dds')).write_bytes(data)
         report['dds_mip_headers_repaired']+=int(repaired)
-    (level/'info.json').write_text(json.dumps({'title':'Los Santos — South Central prototype','description':'Local GTA V conversion. Partial region; unfinished edges and missing props.','authors':'Local conversion experiment','size':[radius*2,radius*2],'defaultSpawnPointName':'spawn_default','supportsTraffic':False},indent=2))
+    (level/'info.json').write_text(json.dumps({'title':'Los Santos — South Central prototype','description':'Local GTA V conversion. Partial region; unfinished edges and missing props.','authors':'Local conversion experiment','size':region_size,'defaultSpawnPointName':'spawn_default','supportsTraffic':False},indent=2))
     jsonl(level/'main/items.level.json',[{'name':'MissionGroup','class':'SimGroup'}])
     jsonl(level/'main/MissionGroup/items.level.json',[{'name':n,'class':'SimGroup','__parent':'MissionGroup'} for n in ['Geometry','Sky','PlayerDropPoints']])
     jsonl(level/'main/MissionGroup/Geometry/items.level.json',objects)
@@ -283,5 +286,9 @@ def build(source,output,center,radius):
     return report
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(); parser.add_argument('--source',type=Path,default=ROOT/'generated/source'); parser.add_argument('--output',type=Path,default=ROOT/'generated/prototype'); parser.add_argument('--center',nargs=2,type=float,default=[-370,-1330]); parser.add_argument('--radius',type=float,default=220)
-    args=parser.parse_args(); build(args.source,args.output,args.center,args.radius)
+    parser=argparse.ArgumentParser(); parser.add_argument('--source',type=Path,default=ROOT/'generated/source'); parser.add_argument('--output',type=Path,default=ROOT/'generated/prototype'); parser.add_argument('--center',nargs=2,type=float,default=None); parser.add_argument('--radius',type=float,default=None); parser.add_argument('--bbox',nargs=4,type=float)
+    args=parser.parse_args()
+    if args.bbox is None:
+        args.center=args.center if args.center is not None else [-370,-1330]
+        args.radius=args.radius if args.radius is not None else 220
+    build(args.source,args.output,args.center,args.radius,bbox=args.bbox)
