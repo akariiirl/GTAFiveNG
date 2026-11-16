@@ -50,7 +50,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
     if np.prod(shape)>25000000: raise ValueError('Raster too large; increase --resolution')
     masks={k:Image.new('1',tuple(shape)) for k in ('visual','roads','collision')}
     for o in objects:
-        name=Path(o.get('shapeName','')).stem
+        name=o.get('sourceArchetype',Path(o.get('shapeName','')).stem)
         if not name: continue
         collision=o.get('collisionType')=='Collision Mesh'
         for t in triangles(build/o['shapeName'].lstrip('/')):
@@ -70,7 +70,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
             pos=np.array([float(e.find('position').get(k)) for k in 'xyz'])
             if not contains(report.get('selection',{'center':origin[:2].tolist(),'radius':report['radius']}),pos[:2]): continue
             key=(e.findtext('archetypeName'),*pos); expected.add(key)
-    converted={(Path(o['shapeName']).stem,*(np.array(o['position'])+origin)) for o in visual}
+    converted={(o.get('sourceArchetype',Path(o['shapeName']).stem),*(np.array(o['position'])+origin)) for o in visual}
     # XML coordinates may differ in the last floating digit: compare rounded coordinates.
     def key(k): return (k[0],*(round(float(v),4) for v in k[1:]))
     converted={key(k) for k in converted}; absent=[k for k in expected if key(k) not in converted]

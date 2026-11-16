@@ -18,6 +18,7 @@ def selection(center=None, radius=None, bbox=None):
 
 
 def contains(config, xy):
+    if 'regions' in config: return any(contains(region,xy) for region in config['regions'])
     x,y = map(float, xy)
     if not math.isfinite(x) or not math.isfinite(y): raise ValueError('Nonfinite placement')
     if 'bbox' in config:

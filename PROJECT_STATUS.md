@@ -273,3 +273,15 @@ bounds, hash diagnostics, decode-free resume and source invalidation. A malforme
 synthetic Geometry child was corrected to a valid Box fixture; native checks pass.
 Real GTA archive/keys and engine semantics remain unverified. Python collision planner
 tests cover boundary intersection and invalid bounds. Legacy reader modes retained.
+
+### Offline composition milestone
+
+Native bootstrap PR #16 merged as 852ff8c after all CI checks passed. Added experimental
+single-level composition with common origin, material/texture/shape deduplication,
+stable object IDs, overlapping placement/collision deduplication and chunk membership
+from geometry extents. One validated deterministic package replaces separate variants.
+Tests cover neighboring synthetic roads, collision alignment/preservation, distinct
+same-named texture payloads, reversed-input ZIP equality and verified resume after
+adding diagnostics. Forty-three Python tests pass locally. Collision transforms
+outside converter-native identity are rejected; exact canonical meshes deduplicate,
+so old rounded exports can retain distinct collision shapes. Runtime remains unverified.
