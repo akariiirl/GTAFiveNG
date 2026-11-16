@@ -90,3 +90,12 @@ source content fingerprints, per-chunk dependencies and verified/pending task
 reconciliation. 18 source-only tests pass. Plans do not execute extraction, cover
 world-space collision bounds or replace the existing radius converter. Neighboring
 plans identify shared names but do not yet share converted geometry on disk.
+
+### Issue #2 C — offline residency/visibility foundations
+
+Added content-hash resource sharing, reference counting, unloading, atomic failed
+transitions, deterministic residency manifests, geographic visibility selection and
+LOD threshold selection. 21 synthetic tests pass. Payload budget tests cover missing,
+corrupt and oversized resources; the budget excludes Python/loader overhead and
+cannot bound allocations performed inside a supplied loader. This is an offline
+model, not BeamNG runtime integration, geometry simplification or proven streaming.
