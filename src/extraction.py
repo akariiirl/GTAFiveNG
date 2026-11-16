@@ -129,10 +129,14 @@ def execute(task_plan, reader, gta_root, output, plan_path, runner=subprocess.ru
                 dictionary=Path(task['path']).stem
             else:
                 dictionary='embedded_'+hashlib.sha256(task['path'].encode()).hexdigest()
-                for reason in task.get('reasons',[]):
+                for reason in dict.fromkeys(task.get('reasons',[])):
                     if not reason.startswith('visual '): continue
-                    asset=reason[7:]; parent=texture_policy['asset_txds'].get(asset)
-                    if parent: texture_policy['txd_parents'][dictionary]=parent
+                    asset=reason[7:]; parent=task_plan.get('texture_policy',{}).get('asset_txds',{}).get(asset)
+                    if parent and parent != dictionary:
+                        previous=texture_policy['txd_parents'].get(dictionary)
+                        if previous and previous != parent:
+                            raise ValueError('Conflicting embedded texture parents: '+dictionary)
+                        texture_policy['txd_parents'][dictionary]=parent
                     texture_policy['asset_txds'][asset]=dictionary
             texture_policy['textures'][dictionary]=textures
         exports.append(output/expected)

@@ -20,6 +20,10 @@ The exact clean setup above is a proposed reconstruction, not yet verified on a 
 
 ## Local conversion
 
+For a completed catalog blocked by archive ambiguity, see
+[CodeWalker selection diagnostics](docs/SELECTION_EVIDENCE.md). This uses a
+separate read-only probe and preserves the existing reader receipts and catalog.
+
 Requires a legally obtained local GTA V Legacy installation, sufficient free storage, and .NET/CodeWalker. Replace the example path and choose **new**, empty output directories. Reader's output must be outside the GTA installation. The following recreates the documented small-region workflow, not neighborhood03 exactly:
 
 ```powershell

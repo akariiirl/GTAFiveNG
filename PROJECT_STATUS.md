@@ -1,5 +1,60 @@
 # Project status — 2026-11-16
 
+## First real CodeWalker-selected road prototype — 2026-11-16
+
+- Reused the 297,372-resource native catalog without bootstrap. Actual pinned
+  CodeWalker dictionaries selected 27 of the original 47 relevant metadata
+  conflicts; 20 names were absent from its active map dictionary. The duplicate
+  v_lev_doors owner is patchday3ng. This is CodeWalker evidence, not verified GTA
+  runtime precedence. Six unrelated YTYP archetype-initialization errors remain
+  in the probe, distinct from the zero raw catalog XML errors.
+- Compared all six previously exported road collision candidates. Older freeway
+  copies were identical; patchday27ng removed one of 9,371 triangles. Base sp1_rd_7
+  had 54,460 triangles versus 54,412 in the identical patchday1ng/2ng copies;
+  52,396 rounded triangles were shared. Roadlike height samples differed by at
+  most 0.000235 m with one missing XY hit. CodeWalker selected patchday1ng for
+  both resource names; alternative versions were not combined.
+- A bounded 463-map search found 26,936 HD placements. Selected the 100 m cell
+  [-400,-1500,-300,-1400], with 159 HD placements and two actual road placements.
+  All 152 exact extraction tasks have verified receipts. The new build converts
+  111 visual placements, 53 drawables, 132,420 visual triangles, 427,502 collision
+  triangles and 146 textures. Eighteen unsupported model names account for 48
+  omitted placements. No missing texture names or texture-resolution diagnostics
+  remain. Repeated placement reasons had caused embedded-texture parent cycles;
+  the fix preserves the original parent and rejects conflicting parents.
+- All 1,651 sampled upward visual-road triangle centers have collision within
+  0.5 m. Structural packaging passes with 225 files, 72 shapes and 172 materials.
+  ZIP is 23,751,047 bytes; projected visual footprint is 0.009532 km². These are
+  offline measurements, not proof of exhaustive collision coverage.
+- New local package: D:/GTAFiveNG-local/master-integration-20261116/generated/
+  real-integration-01/selected-prototype-03/packages/los_santos_codewalker_road01.zip.
+  Build, progress PNGs, raw exports and isolated profile are sibling directories.
+  Older checkpoints and game installations are preserved. No generated data is
+  included in this commit.
+- BeamNG 0.40.5 Direct3D12 loaded the level and spawned a pickup on the road using
+  the RTX 4070. The screenshot shows overbright lighting and unfinished edges;
+  visual fidelity is not passed. Thirty instrumented samples show 25.594 m net
+  movement, 7.751 m/s peak speed, and a stable stop above collision. Screenshots
+  show the vehicle leaves the visible road patch for collision-only ground; this
+  is a partial drive, not a passed neighborhood or boundary-driving test.
+  First observed process working set was 2,527,121,408 bytes; GPU-wide usage was
+  3,196 MiB, not process-specific VRAM. The measured 265.28 game update calls per
+  second are not rendered FPS. Raw telemetry and two in-game screenshots remain
+  in the isolated profile's current directory. No rendered-FPS benchmark or
+  regional-boundary drive is claimed.
+- SelectionEvidence builds; 42 focused local source regressions pass. Full local
+  discovery encountered sandbox hardlink restrictions and missing optional lupa;
+  the focused suite was rerun outside the sandbox. CI remains authoritative for
+  the complete synthetic suite. See docs/SELECTION_EVIDENCE.md for reproduction
+  and the distinction between dictionary evidence and GTA runtime behavior.
+- Exact next integration blockers: extend visual selection beyond placement
+  anchors to cover the driving route, support the omitted skinned/fragment
+  geometry, and correct lighting/material presentation before expanding. The
+  297,372 catalog paths are unique after case/slash normalization. No required
+  resource ambiguity remains for this explicit CodeWalker-selected prototype;
+  matching GTA runtime activation/precedence remains unverified.
+
+
 ## CodeWalker nested-mount diagnostics — 2026-11-16
 
 - The local CodeWalker probe reports 3,920 active archive mappings and 646 patch mappings, with zero logged errors. Some patches replace nested RPF archives, not individual entries. Comparing each of the 47 relevant metadata conflicts after applying archive-prefix patches still produced 26 with one candidate in the reported active archives, 20 with none, and one with two. This is diagnostic evidence, not proof of the running game's selection: never silently choose a candidate from this result.
