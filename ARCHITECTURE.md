@@ -8,3 +8,14 @@ The pipeline is a local, read-only prototype for a subset of GTA V Legacy, not a
 4. `src/package.py` validates generated level references, writes a deterministic ZIP to a new path, checks ZIP integrity and emits a manifest. Structural success does not prove appearance or physics. `tools/launch_test.ps1` launches a local Steam BeamNG install with an isolated profile and `src/lsf_validation.lua` telemetry; its paths are machine-specific.
 
 Data boundaries: tracked project source and documents are portable; `vendor/CodeWalker` must be restored separately, while `generated/`, `builds/`, game files and game-derived assets remain local and ignored. Reports inside generated directories also stay local; PROJECT_STATUS.md carries a short non-asset summary. LICENSES.md covers the relevant distribution constraints.
+
+Cloud additions (2026-11-16): `dependencies.py` indexes flat exported YDR/YFT XML,
+resolves basic YTYP `name` → `assetName` aliases, and reports ambiguous names and
+unresolved aliases in `dependency_resolution`. It deliberately does not guess
+archive precedence. Duplicate standalone drawable names now remain unresolved
+instead of silently selecting a filename. The resolver API supports explicit
+filename overrides; the converter CLI does not yet expose them. YDD members,
+hash-only references and scoped texture inheritance still need implementation.
+`region.py` adds immutable content-addressed whole-region builds and verified cache
+reuse around the existing converter/package/map functions. No runtime streaming,
+LOD generation, geographic chunks or shared-asset packaging is implemented.
