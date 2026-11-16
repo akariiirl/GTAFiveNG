@@ -1,0 +1,13 @@
+vendor/
+generated/
+builds/
+logs/
+tools/dotnet/
+tools/dotnet-install.ps1
+tools/.nuget/
+tools/.dotnet-home/
+**/bin/
+**/obj/
+**/__pycache__/
+*.pyc
+config/local.json

@@ -1,0 +1,9 @@
+{
+  "level_name": "los_santos_fazes",
+  "gta_root": "D:/SteamLibrary/steamapps/common/Grand Theft Auto V",
+  "beamng_root": "D:/SteamLibrary/steamapps/common/BeamNG.drive",
+  "edition": "legacy",
+  "initial_region": {"name": "south_los_santos", "center": [-50, -1800], "radius": 256},
+  "source_policy": "Read-only local assets; no game modification or public distribution",
+  "output_root": "generated"
+}
