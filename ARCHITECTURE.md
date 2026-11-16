@@ -68,3 +68,10 @@ package hashes and art hashes shared across regions. Packages retain self-contai
 assets and the fixed legacy level ID; simultaneous installation is unsupported.
 `package.py` now streams files/hashes with bounded I/O buffers instead of reading
 whole files/ZIPs into Python bytes. ZIP format bytes remain regression-tested.
+
+`lod.py` supplies experimental deterministic visual clustering for optional preview
+DAEs outside `levels/`. Boundary and duplicate-position vertices stay separate;
+orientation reversal/empty output falls back. Normals/UVs average within clusters;
+this is not a topology or texture-quality guarantee. Collision limits reject,
+never silently decimate/drop physics. Default packages and detail selection are
+unchanged. CI publishes only allowlisted maps from original synthetic test fixtures.

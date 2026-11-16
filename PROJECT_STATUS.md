@@ -215,3 +215,20 @@ confirms byte-identical results against the original writer. Suite has 38 tests.
 Batch packages remain independent same-level variants, not a combined streaming
 map. Actual mesh LOD generation, chunked geometry packaging, extraction bootstrap
 metadata, hash-only linkage and game validation remain incomplete.
+
+### Experimental visual LOD, collision budgets and synthetic map artifacts
+
+Multi-region PR #13 merged as 165687c after all checks passed. Added opt-in visual
+LOD preview generation outside packaged levels, preserving boundary/seam vertices
+with orientation/empty fallback. Collision meshes are never simplified. Optional
+collision triangle limits reject oversized builds with diagnostics, preserving
+partial output instead of publishing incomplete physics. Forty tests pass locally,
+including deterministic grid reduction, preserved boundaries, package equivalence
+with previews and collision budget failure. CI now retains allowlisted original
+synthetic coverage/density/collision PNGs and progress JSON in addition to test and
+comparison evidence. No real game output is uploaded.
+
+One 64x64 synthetic flat-grid observation: 7,938 -> 762 triangles at 4 m cell size,
+0.03913 s, max vertex-to-cluster displacement 2.1213 m. This is not a Hausdorff bound,
+quality approval or game performance test. Preview LOD remains unintegrated with
+engine detail selection; it is deliberately excluded from gameplay packaging.

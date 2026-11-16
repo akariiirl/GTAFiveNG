@@ -61,6 +61,12 @@ class RegionTests(unittest.TestCase):
             self.assertIsNone(summary['whole_island_exported_area_percent'])
             self.assertEqual(summary['asset_completeness']['expected_instances_in_available_selected_ymaps'], 3)
             self.assertEqual(summary['asset_completeness']['missing_placements'], 1)
+            import os, shutil
+            artifact=os.environ.get('SYNTHETIC_ARTIFACT_DIR')
+            if artifact:
+                destination=Path(artifact); destination.mkdir(parents=True,exist_ok=True)
+                for name in ('asset_density.png','neighborhood_progress.png','conversion_heatmap.png','progress_summary.json'):
+                    shutil.copyfile(progress/name,destination/('synthetic_'+name))
             for p, data in original.items():
                 if p.parent != progress: self.assertEqual(p.read_bytes(), data)
 

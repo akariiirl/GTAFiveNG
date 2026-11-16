@@ -213,3 +213,20 @@ workspace; successfully completed regions survive a later interrupted batch.
 **Packages are independent variants with the same level name. Do not install them
 together.** The shared index is for build reuse, not external engine asset references.
 Packaging now streams file bytes and ZIP hashing; mesh conversion still loads meshes.
+
+## Experimental LOD previews and collision complexity limits
+
+```bash
+.venv/bin/python src/region.py --source generated/extracted-new --workspace generated/preview-new --center -370 -1330 --radius 220 --lod-preview-sizes 2 4 --max-collision-triangles 1000000
+.venv/bin/python tools/benchmark_lod.py --output generated/lod-benchmark-new.json
+```
+
+Optional LOD previews are written under `build/lod_previews/` with conversion-report
+statistics. They are excluded from the ZIP and never simplify physics or change
+engine detail selection. Vertex clustering preserves boundary and duplicate-position
+seam vertices, averages attributes, and falls back on orientation reversal/empty
+output. It does not prove topology/UV fidelity or surface error; inspect before any
+future engine integration. Cell sizes must be increasing, finite and positive.
+Collision limits reject a build before writing an over-budget collision shape/ZIP,
+with `collision_budget.json`; they do not truncate physics or bound the memory used
+to decode a single collision resource. Default conversion remains unchanged.

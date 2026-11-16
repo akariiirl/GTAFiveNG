@@ -48,3 +48,9 @@ Multi-region batches run the existing per-region progress generator by default;
 images remain within immutable region build directories. Batch summaries index
 regions/chunks and content hashes without adding island completion estimates.
 No overlapping-region area sums are presented as geographic coverage.
+
+CI artifacts now include clearly named `synthetic_` placement-density, neighborhood
+coverage and collision-evidence PNGs plus progress JSON, generated only from original
+tiny fixtures. They demonstrate tracker behavior, not converted Los Santos territory.
+LOD preview counts/displacement appear in conversion reports but are not driving or
+coverage evidence; previews remain outside packaged levels.

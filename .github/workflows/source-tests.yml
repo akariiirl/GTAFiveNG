@@ -29,6 +29,10 @@ jobs:
             ci-synthetic/test-summary.json
             ci-synthetic/comparison.json
             ci-synthetic/comparison.png
+            ci-synthetic/synthetic_asset_density.png
+            ci-synthetic/synthetic_neighborhood_progress.png
+            ci-synthetic/synthetic_conversion_heatmap.png
+            ci-synthetic/synthetic_progress_summary.json
           retention-days: 14
   reader:
     runs-on: ubuntu-latest
