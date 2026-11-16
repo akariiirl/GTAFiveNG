@@ -1,6 +1,7 @@
 """Validate generated dependencies and write a deterministic, versioned local ZIP."""
 from pathlib import Path
 import argparse, hashlib, json, zipfile
+from resource_cache import hash_file
 import xml.etree.ElementTree as ET
 
 def validate(root):
@@ -35,13 +36,17 @@ def package(root,target):
     with zipfile.ZipFile(target,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
         for p in files:
             if not p.is_file(): continue
-            name=p.relative_to(root).as_posix(); data=p.read_bytes()
+            name=p.relative_to(root).as_posix(); size=p.stat().st_size; digest=hashlib.sha256()
             info=zipfile.ZipInfo(name,date_time=(2026,11,15,0,0,0)); info.compress_type=zipfile.ZIP_DEFLATED
-            z.writestr(info,data); manifest.append({'path':name,'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)})
+            info.file_size=size
+            with p.open('rb') as source, z.open(info,'w') as destination:
+                for block in iter(lambda:source.read(1024*1024),b''):
+                    destination.write(block); digest.update(block)
+            manifest.append({'path':name,'sha256':digest.hexdigest(),'bytes':size})
     with zipfile.ZipFile(target) as z:
         assert z.testzip() is None
         assert all(n.startswith('levels/los_santos_fazes/') for n in z.namelist())
-    report.update(files=len(manifest),zip_bytes=target.stat().st_size,zip_sha256=hashlib.sha256(target.read_bytes()).hexdigest())
+    report.update(files=len(manifest),zip_bytes=target.stat().st_size,zip_sha256=hash_file(target))
     target.with_suffix('.manifest.json').write_text(json.dumps({'validation':report,'files':manifest},indent=2))
     print(json.dumps(report,indent=2))
 

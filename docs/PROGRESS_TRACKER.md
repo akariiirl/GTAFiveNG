@@ -43,3 +43,8 @@ Bounding-box builds now use the same placement predicate for conversion and map
 statistics; report `selection.bbox` is authoritative. Old reports still use radius.
 Maps show actual exported geometry extending outside selection edges where whole
 placed assets cross the box; no geometric clipping or driving coverage is implied.
+
+Multi-region batches run the existing per-region progress generator by default;
+images remain within immutable region build directories. Batch summaries index
+regions/chunks and content hashes without adding island completion estimates.
+No overlapping-region area sums are presented as geographic coverage.
