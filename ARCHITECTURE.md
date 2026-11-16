@@ -47,3 +47,11 @@ and replayable material/texture/diagnostic effects; no pickle is used. Atomic
 no-clobber publication protects interrupted/concurrent writes. Packaging stays
 self-contained; cached/uncached synthetic packages match byte-for-byte. This is
 conversion CPU reuse, not runtime resource sharing or bounded-memory processing.
+
+`extraction.py` bridges exported region metadata and inventory to exact reader tasks.
+The native task protocol has source-only validation independent of game keys.
+Task-mode exports use SHA-derived path prefixes, per-resource DDS directories and
+verified receipts. Archive priorities/parent TXDs require explicit supplied policy;
+collision selection requires inventory bounds. Native inventory currently only
+provides names/sizes, so collision bounds stay unknown by default. The Python adapter
+verifies receipts and builds scoped texture policy; it does not decode archives.

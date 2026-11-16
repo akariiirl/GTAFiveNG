@@ -166,3 +166,23 @@ include replayed material/texture/report effects; source exports remain read-onl
 Cache is local/ignored with generated workspace, fully loads individual JSON mesh
 entries, and does not cache collisions or establish runtime streaming. PR #9 bbox
 CI passed Windows/Linux tests and Linux reader compilation. No game assets used.
+
+## Autonomous integration/extraction milestone — 2026-11-16
+
+PRs #3 through #10 merged sequentially with passing checks and merge commits; all
+were retargeted to master in dependency order. Integrated master 050fef2 matches
+the final stacked source tree, and its 31-test suite passed locally. No protections
+or checks bypassed. Future milestones are authorized for clean automatic merging.
+
+Added Python region-to-exact-extraction planning and AssetReader --tasks protocol:
+YMAP/YTYP metadata, YDR/YDD/YFT requests, TXD parent closure, supplied archive
+priorities, known-bounds YBN selection, deterministic naming, missing/conflict
+reports, SHA-256 source/output receipts and resume verification. Native task mode
+recurses archives, isolates texture outputs, rejects failed/missing tasks with a
+nonzero exit, and preserves changed/corrupt/incomplete outputs. Python validates
+receipts and emits scoped texture policy for conversion. Legacy modes retained.
+33 Python tests pass; .NET build and native/Python synthetic task-protocol smoke
+check pass. Seed placement/type metadata is required; hash-only references, actual
+mount metadata and native collision-bounds inventory remain gaps. No actual game
+archives or keys were accessed. Current balance remains last user report 426;
+original 180 cloud total/276 local reserve applies, with no live usage meter.

@@ -41,3 +41,4 @@ jobs:
           git clone https://github.com/dexyfex/CodeWalker.git vendor/CodeWalker
           git -C vendor/CodeWalker checkout 485d56bec00262ed7fa472261cce7bbc6202b96e
           dotnet build src/AssetReader/AssetReader.csproj -c Release
+      - run: python tools/check_reader_protocol.py src/AssetReader/bin/Release/net8.0/AssetReader.dll
