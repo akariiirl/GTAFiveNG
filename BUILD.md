@@ -150,3 +150,29 @@ overwritten. Use a fresh workspace to recover while preserving evidence. Cache
 stats appear in region manifests. Real cached geometry is proprietary and must
 remain local/ignored. This reduces drawable parsing/conversion, not collision or
 texture conversion, and is not a bounded-memory mesh pipeline. Entries load fully.
+
+## Exact extraction task bridge (cloud-tested protocol, real game unverified)
+
+Start with exported YMAP/YTYP seed metadata and `inventory.jsonl` from AssetReader.
+The planner cannot locate a world region before placement metadata exists.
+Optional `archive_priorities` in seed `dependency-policy.json` maps archive path
+prefixes to numeric priority (larger wins); ties stay ambiguous. Parent TXDs require
+supplied `txd_parents` evidence. Inventory collision `bounds_xy` permits conservative
+bbox overlap; native inventory currently lacks those bounds and reports them unknown.
+
+```bash
+.venv/bin/python src/extraction.py --source generated/metadata-seed --inventory generated/inventory.jsonl --bbox -500 -1500 -200 -1200 --plan generated/tasks-new.json
+# Only on a PC with authorized game files:
+.venv/bin/python src/extraction.py --source generated/metadata-seed --inventory generated/inventory.jsonl --bbox -500 -1500 -200 -1200 --plan generated/tasks-new.json --reader src/AssetReader/bin/Release/net8.0/AssetReader.dll --gta-root YOUR_GTA_ROOT --output generated/extracted-new
+```
+
+`--tasks PLAN` makes AssetReader select exact archive paths, recurse installation
+archives, scope DDS output per resource, use deterministic XML names and write
+SHA-256 output receipts. Resume validates outer archive bytes, reader assembly and
+all recorded exports. Outer archive hashes stream once per archive per batch.
+Changed/corrupt/incomplete task output is preserved and rejected: select a fresh
+output directory. Individual task failures return nonzero; inspect `errors.log`.
+Python verifies returned receipts and writes converter-compatible scoped texture
+policy. Embedded textures inherit the known external TXD. Existing filter/report
+reader commands remain available. No GTA extraction success is claimed in cloud.
+CI validates native/Python naming and unsafe-path rejection without loading keys.
