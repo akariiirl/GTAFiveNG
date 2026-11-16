@@ -159,7 +159,7 @@ maximum 180 cloud credits total, preserve 276 for local development. At that rep
 at most 150 additional credits could be spent while preserving 276. This supersedes
 the 60-credit-only reserve calculation above; no live credit meter is available.
 
-Added opt-in persistent drawable conversion caching between regions. Thirty tests
+Added opt-in persistent drawable conversion caching between regions. Thirty-one tests
 pass locally: neighboring cache reuse, byte-identical cached/uncached ZIP/report,
 source invalidation, immutable entry conflicts and corruption rejection. Entries
 include replayed material/texture/report effects; source exports remain read-only.

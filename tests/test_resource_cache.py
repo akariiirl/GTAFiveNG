@@ -35,3 +35,27 @@ class ResourceCacheTests(unittest.TestCase):
             path=cache.path(key); data=json.loads(path.read_text()); data['payload']='{}'; path.write_text(json.dumps(data))
             with self.assertRaisesRegex(ValueError,'Corrupt'): cache.get(key)
             with self.assertRaises(ValueError): cache.get('../escape')
+
+    def test_replay_preserves_texture_material_and_report_effects(self):
+        import numpy as np
+        from resource_cache import cached_drawable
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); source=root/'drawable.xml'; source.write_text('synthetic test input')
+            cache=ResourceCache(root/'cache'); calls=[]
+            def convert(xml,name,materials,textures,report):
+                calls.append(name); materials['mat']={'name':'mat','Stages':[{'diffuseMap':'paint.dds'}]}
+                textures['paint']['used']=True
+                report['missing_textures'].add('missing')
+                report['skipped_skinned_models']={'skin'}
+                report['degenerate_triangles_removed']=2
+                return [{'v':np.array([[0.,0,0],[1,0,0],[0,1,0]]),'i':np.array([[0,1,2]]),'material':'mat','n':None}]
+            snapshots=[]
+            for _ in range(2):
+                materials={}; textures={'paint':{'path':root/'paint.dds','used':False}}
+                report={'missing_textures':set(),'degenerate_triangles_removed':0}
+                meshes=cached_drawable(cache,source,'toy',materials,textures,report,convert)
+                snapshots.append((materials,textures['paint']['used'],report))
+                self.assertEqual(meshes[0]['i'].tolist(),[[0,1,2]])
+            self.assertEqual(calls,['toy'])
+            self.assertEqual(snapshots[0],snapshots[1])
+            self.assertTrue(snapshots[1][1])
