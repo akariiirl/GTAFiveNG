@@ -128,3 +128,15 @@ meshes. No resource/performance benchmark beyond synthetic tests is claimed. Cre
 usage/balance remains unavailable, so preserving the exact 60-credit reserve cannot
 be certified. This bounded pass stops after CI review rather than launching large,
 unmetered integration work. PRs #3–#7 are stacked; review/merge in numerical order.
+
+### Issue #2 A follow-up — scoped textures reach packaging
+
+Opt-in scoped texture conversion now binds archetype TXDs, follows parent lookup,
+uses distinct output paths for conflicting texture names and reports missing or
+conflicting dictionaries. Legacy flat-texture behavior remains default. 26 tests
+pass locally, including two drawables using different original synthetic DDS
+payloads under the same texture name, inherited lookup and structural packaging.
+Windows CI initially exposed a short/long temp-path assertion mismatch in PR #7;
+the assertion now compares canonical paths and CI is rerunning. No game-derived
+texture metadata or appearance has been validated. This supersedes the earlier
+note that the scoped lookup API was not wired into conversion.

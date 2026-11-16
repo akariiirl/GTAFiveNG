@@ -84,3 +84,58 @@ def resolve(source, overrides=None):
                       'unresolved_archetype_assets': {n: sorted(a) for n,a in aliases.items() if n not in resolved},
                       'unsupported_dictionary_exports': [],
                       'precedence': 'Explicit filename priorities only; equal-rank conflicts unresolved.'}
+
+
+class TextureCatalog:
+    """Opt-in scoped material bindings; legacy flat exports remain the default."""
+    def __init__(self, source):
+        import hashlib
+        self.source = source
+        self.policy = load_policy(source)
+        self.enabled = self.policy.get('scoped_textures', False)
+        self.records = {}
+        self.diagnostics = {}
+        self.asset_txds = dict(self.policy.get('asset_txds', {}))
+        definitions = collections.defaultdict(list)
+        for path in sorted(source.glob('*.ytyp.xml')):
+            for item in ET.parse(path).getroot().findall('.//archetypes/Item'):
+                name, txd = item.findtext('name'), item.findtext('textureDictionary')
+                if name and txd:
+                    key = name.lower()
+                    definitions[key].append((self.policy.get('priorities', {}).get(path.name, 0), txd.lower()))
+        for name, definitions_for_name in definitions.items():
+            if name in self.asset_txds: continue
+            priority = max(rank for rank, txd in definitions_for_name)
+            choices = {txd for rank, txd in definitions_for_name if rank == priority}
+            if len(choices) == 1: self.asset_txds[name] = next(iter(choices))
+            else: self.diagnostics[name] = {'dictionary_conflict': sorted(choices)}
+        self.legacy = {p.stem.lower(): {'path':p,'used':False} for p in sorted(source.glob('*.dds'))}
+        self._hash = hashlib.sha256
+
+    def for_asset(self, asset):
+        if not self.enabled: return self.legacy
+        txd = self.asset_txds.get(asset.lower())
+        if not txd:
+            self.diagnostics.setdefault(asset, {}).update(missing_dictionary=True)
+            return {}
+        names = set()
+        current = txd; seen = set()
+        while current and current not in seen:
+            seen.add(current)
+            names.update(self.policy.get('textures', {}).get(current, {}))
+            current = self.policy.get('txd_parents', {}).get(current, '')
+        bindings = {}
+        if current: self.diagnostics[asset] = {'parent_cycle': sorted(seen)}
+        for name in sorted(names):
+            path, evidence = texture_lookup(self.source, txd, name, self.policy)
+            if path is None:
+                self.diagnostics.setdefault(asset, {})[name] = evidence
+                continue
+            relative = path.relative_to(self.source.resolve()).as_posix()
+            target = 'scoped_' + self._hash(relative.encode()).hexdigest() + '.dds'
+            record = self.records.setdefault(relative, {'path':path,'target':target,'used':False})
+            bindings[name] = record
+        return bindings
+
+    def used_records(self):
+        return [t for t in (self.records.values() if self.enabled else self.legacy.values()) if t['used']]

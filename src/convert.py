@@ -4,7 +4,7 @@ import argparse, collections, hashlib, json, math, shutil, zipfile, struct, re
 import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
-from dependencies import resolve
+from dependencies import resolve, TextureCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = 'http://www.collada.org/2005/11/COLLADASchema'
@@ -148,7 +148,7 @@ def drawable(xml, name, materials, textures, report):
             tex=shader.findtext("Parameters/Item[@name='DiffuseSampler']/Name")
             stage={'diffuseColor':[1,1,1,1],'specularPower':16,'useAnisotropic':True}
             if tex and tex.lower() in textures:
-                target=tex.lower()+'.dds'; stage['diffuseMap']='/levels/los_santos_fazes/art/textures/'+target
+                target=textures[tex.lower()].get('target',tex.lower()+'.dds'); stage['diffuseMap']='/levels/los_santos_fazes/art/textures/'+target
                 textures[tex.lower()]['used']=True
             elif tex: report['missing_textures'].add(tex)
             materials[mat]={'name':mat,'class':'Material','mapTo':mat,'Stages':[stage],'doubleSided':True}
@@ -220,7 +220,7 @@ def build(source,output,center,radius):
     origin=np.array([center[0],center[1],0.]); level=output/'levels/los_santos_fazes'
     level.mkdir(parents=True,exist_ok=True)
     report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'radius':radius,'in_game_verified':False}
-    textures={p.stem.lower():{'path':p,'used':False} for p in sorted(source.glob('*.dds'))}
+    texture_catalog=TextureCatalog(source)
     drawables, report['dependency_resolution'] = resolve(source)
     materials={}; objects=[]; converted={}; used=set(); local_bounds={}
     coverage_lo=np.array([np.inf,np.inf]); coverage_hi=-coverage_lo
@@ -233,7 +233,7 @@ def build(source,output,center,radius):
             used.add(key)
             if name not in drawables: report['missing_assets'].add(name); continue
             if name not in converted:
-                meshes=drawable(drawables[name],name,materials,textures,report)
+                meshes=drawable(drawables[name],name,materials,texture_catalog.for_asset(name),report)
                 if not meshes: report['missing_assets'].add(name); continue
                 dae(level/'art/shapes'/f'{name}.dae',meshes)
                 converted[name]=sum(len(m['i']) for m in meshes)
@@ -264,11 +264,10 @@ def build(source,output,center,radius):
     (level/'art/main.materials.json').write_text(json.dumps(materials,indent=2))
     td=level/'art/textures'; td.mkdir(exist_ok=True)
     report['dds_mip_headers_repaired']=0
-    for name,tex in textures.items():
-        if tex['used']:
-            data,repaired=normalized_dds(tex['path'].read_bytes())
-            (td/(name+'.dds')).write_bytes(data)
-            report['dds_mip_headers_repaired']+=int(repaired)
+    for tex in texture_catalog.used_records():
+        data,repaired=normalized_dds(tex['path'].read_bytes())
+        (td/tex.get('target',tex['path'].stem.lower()+'.dds')).write_bytes(data)
+        report['dds_mip_headers_repaired']+=int(repaired)
     (level/'info.json').write_text(json.dumps({'title':'Los Santos — South Central prototype','description':'Local GTA V conversion. Partial region; unfinished edges and missing props.','authors':'Local conversion experiment','size':[radius*2,radius*2],'defaultSpawnPointName':'spawn_default','supportsTraffic':False},indent=2))
     jsonl(level/'main/items.level.json',[{'name':'MissionGroup','class':'SimGroup'}])
     jsonl(level/'main/MissionGroup/items.level.json',[{'name':n,'class':'SimGroup','__parent':'MissionGroup'} for n in ['Geometry','Sky','PlayerDropPoints']])
@@ -277,7 +276,8 @@ def build(source,output,center,radius):
     jsonl(level/'main/MissionGroup/Sky/items.level.json',[{'name':'theLevelInfo','class':'LevelInfo','__parent':'Sky','globalEnviromentMap':'BNG_Sky_01_cubemap','gravity':-9.81,'visibleDistance':2500,'fogDensity':0.0001}, {'name':'sunsky','class':'ScatterSky','__parent':'Sky','skyBrightness':40,'azimuth':90,'elevation':45}, {'name':'tod','class':'TimeOfDay','__parent':'Sky','time':0.15,'play':False}])
     for k in ['missing_assets','missing_textures','skipped_skinned_models']:
         if k in report: report[k]=sorted(report[k])
-    report['textures']=sum(t['used'] for t in textures.values()); report['unique_drawables']=len(converted)
+    report['texture_resolution']={'scoped':bool(texture_catalog.enabled),'diagnostics':texture_catalog.diagnostics}
+    report['textures']=len(texture_catalog.used_records()); report['unique_drawables']=len(converted)
     (output/'conversion_report.json').write_text(json.dumps(report,indent=2))
     print(json.dumps({k:v for k,v in report.items() if k not in ('missing_assets','missing_textures')},indent=2))
     return report

@@ -26,3 +26,10 @@ atomic transitions bounded by staged/retained payload size. Loading a new chunk 
 require headroom for the previous chunk during staging; callers can unload first.
 A loader's own temporary memory is outside this bound. Visibility and LOD policies
 are pure functions for later integration; no BeamNG streaming hooks are installed.
+
+`TextureCatalog` now connects opt-in scoped TXD policy to actual material/texture
+packaging. Default conversion still uses flat DDS exports. Explicit asset-to-TXD
+policy overrides YTYP fields; conflicting equal-priority YTYP dictionary definitions
+remain unresolved. Parent dictionary traversal and source-relative texture targets
+prevent collisions between same-named textures. Extracting this policy from the
+installed game's active mount metadata remains deferred integration work.

@@ -112,3 +112,12 @@ Comparisons count resources/triangles, not geographic or gameplay completion.
 Source fingerprints appear in the JSON. Progress maps additionally emit
 `asset_density.png` (converted placements per bin, with unresolved placements).
 CI uploads only original synthetic comparison PNG/JSON and a test-result summary.
+
+Scoped texture conversion is opt-in: set `"scoped_textures": true` in the export
+policy, map `asset_txds` from archetype names to dictionary names (or supply YTYP
+`textureDictionary` fields), and provide the `textures` and `txd_parents` maps above.
+Child dictionaries override parents. Output texture filenames are derived from
+source-relative paths so identically named textures in different dictionaries do
+not overwrite each other. Missing dictionary metadata stays unresolved; scoped
+mode never silently falls back to an unrelated flat DDS. Default mode preserves
+existing flat exports. Actual game dictionary metadata extraction remains deferred.
