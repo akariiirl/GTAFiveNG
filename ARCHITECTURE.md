@@ -19,3 +19,10 @@ hash-only references and scoped texture inheritance still need implementation.
 `region.py` adds immutable content-addressed whole-region builds and verified cache
 reuse around the existing converter/package/map functions. No runtime streaming,
 LOD generation, geographic chunks or shared-asset packaging is implemented.
+
+Issue #2 additions: `planning.py` emits deterministic exported-source chunk/dependency
+plans. `chunks.py` models resource residency by SHA-256, with shared references and
+atomic transitions bounded by staged/retained payload size. Loading a new chunk may
+require headroom for the previous chunk during staging; callers can unload first.
+A loader's own temporary memory is outside this bound. Visibility and LOD policies
+are pure functions for later integration; no BeamNG streaming hooks are installed.
