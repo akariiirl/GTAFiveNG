@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
 from selection import selection, contains, frame
+from lod import simplify, validate_settings
 from resource_cache import cached_drawable, cached_collision, cached_texture
 from dependencies import resolve, TextureCatalog
 
@@ -218,7 +219,8 @@ def jsonl(path,rows):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(''.join(json.dumps(r,separators=(',',':'))+'\n' for r in rows))
 
-def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
+def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_sizes=(),max_collision_triangles=None):
+    validate_settings(lod_sizes,max_collision_triangles)
     config=selection(center,radius,bbox)
     center,radius,region_size=frame(config)
     origin=np.array([center[0],center[1],0.]); level=output/'levels/los_santos_fazes'
@@ -241,6 +243,13 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
                 meshes=cached_drawable(shared_cache,drawables[name],name,materials,bindings,report,drawable) if shared_cache is not None else drawable(drawables[name],name,materials,bindings,report)
                 if not meshes: report['missing_assets'].add(name); continue
                 dae(level/'art/shapes'/f'{name}.dae',meshes)
+                if lod_sizes:
+                    previews=[]
+                    for index,size in enumerate(lod_sizes):
+                        simplified=[simplify(mesh,size) for mesh in meshes]
+                        dae(output/'lod_previews'/name/(str(index)+'.dae'),[m for m,r in simplified])
+                        previews.append([r for m,r in simplified])
+                    report.setdefault('lod_previews',{})[name]=previews
                 converted[name]=sum(len(m['i']) for m in meshes)
                 vertices=np.concatenate([m['v'] for m in meshes])
                 local_bounds[name]=(vertices.min(axis=0),vertices.max(axis=0))
@@ -258,6 +267,10 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
         if np.any(hi[:2]<coverage_lo) or np.any(lo[:2]>coverage_hi): continue
         meshes=cached_collision(shared_cache,p,origin,report,bounds_mesh) if shared_cache is not None else bounds_mesh(p,origin,report)
         if not meshes: continue
+        pending_triangles=report['collision_triangles']+sum(len(m['i']) for m in meshes)
+        if max_collision_triangles is not None and pending_triangles>max_collision_triangles:
+            (output/'collision_budget.json').write_text(json.dumps({'limit':max_collision_triangles,'observed_triangles':pending_triangles,'resource':p.name,'in_game_verified':False},indent=2))
+            raise ValueError('Collision triangle budget exceeded; partial build preserved')
         name='collision_'+hashlib.sha256(p.name.encode()).hexdigest()[:12]
         # Torque requires a nonnegative render detail even for a hidden physics shape.
         anchor=meshes[0]['v'][meshes[0]['i'][0]]
