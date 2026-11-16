@@ -61,3 +61,10 @@ neighboring origins share conversion work. Texture cache metadata references
 verified content-addressed binary payloads. Warm texture publication streams rather
 than materializing output bytes in Python. Optional repair quarantines corrupt
 metadata/payloads; no old build is overwritten. Mesh JSON still loads in full.
+
+`batch.py` coordinates canonical region selections using shared caching, persists
+completion state and publishes an immutable batch index of geographic chunks,
+package hashes and art hashes shared across regions. Packages retain self-contained
+assets and the fixed legacy level ID; simultaneous installation is unsupported.
+`package.py` now streams files/hashes with bounded I/O buffers instead of reading
+whole files/ZIPs into Python bytes. ZIP format bytes remain regression-tested.

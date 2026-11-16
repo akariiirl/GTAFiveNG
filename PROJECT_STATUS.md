@@ -201,3 +201,17 @@ One Linux Python 3.12.14 synthetic 1024x1024 alpha-DDS observation: cold 0.05654
 13,633,380 traced Python peak bytes; warm 0.01412 s / 2,103,635 bytes. Input 1,048,704
 bytes, output 4,194,432 bytes; outputs identical. Single observation, not RSS, real
 asset workload, streaming or BeamNG performance. Benchmark script is reproducible.
+
+### Multi-region and streaming-package milestone
+
+Cache PR #12 merged as adf13f9 only after all six push/PR checks passed. Automatic
+review correctly blocked an earlier premature attempt while one run was pending;
+no check/protection was bypassed. Added mixed radius/bbox batch conversion with
+shared cache, deterministic chunk/shared-art indexes, package hashes, preserved
+completion state, immutable manifests and per-region maps by default. Tests cover
+neighbor reuse and synthetic interruption/retry without rewriting completed ZIPs.
+Packaging streams source files and ZIP hashing in 1 MiB blocks; a regression test
+confirms byte-identical results against the original writer. Suite has 38 tests.
+Batch packages remain independent same-level variants, not a combined streaming
+map. Actual mesh LOD generation, chunked geometry packaging, extraction bootstrap
+metadata, hash-only linkage and game validation remain incomplete.

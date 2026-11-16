@@ -190,3 +190,26 @@ any earlier failed build. Existing converted packages are never repaired in plac
 
 This small original synthetic DDS benchmark reports cold/warm wall time and traced
 Python allocations, not RSS, game performance or a representative full-city load.
+
+## Multi-region batches
+
+Create an original region-spec JSON such as:
+
+```json
+[{"center":[-370,-1330],"radius":220},{"bbox":[-500,-1500,-200,-1200]}]
+```
+
+```bash
+.venv/bin/python src/batch.py --source generated/extracted-new --workspace generated/batch-new --regions config/regions-local.json
+```
+
+Selections are canonicalized/deduplicated and run with shared caching. Each region
+gets validated deterministic packaging and, by default, its own progress maps.
+The batch manifest indexes geographic chunks, region package hashes and shared art
+content hashes; state.json records completed work for retry. Repeating a completed
+batch verifies/reuses region outputs without rewriting its immutable manifest.
+Individual failed partial region builds remain preserved and require a fresh
+workspace; successfully completed regions survive a later interrupted batch.
+**Packages are independent variants with the same level name. Do not install them
+together.** The shared index is for build reuse, not external engine asset references.
+Packaging now streams file bytes and ZIP hashing; mesh conversion still loads meshes.
