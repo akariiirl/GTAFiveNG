@@ -232,3 +232,28 @@ One 64x64 synthetic flat-grid observation: 7,938 -> 762 triangles at 4 m cell si
 0.03913 s, max vertex-to-cluster displacement 2.1213 m. This is not a Hausdorff bound,
 quality approval or game performance test. Preview LOD remains unintegrated with
 engine detail selection; it is deliberately excluded from gameplay packaging.
+
+## Confirmed integrated handoff — 2026-11-16
+
+PRs #3–#10 and new milestones #11–#14 are merged into master. Functional integration
+head: 0f14a5e26f98d6b6f710ce987148834e6c019166. Post-merge master CI
+43910964048 passed all 40 Python tests on Windows and Linux, Linux .NET AssetReader
+build and native/Python task-protocol smoke check. CI contains allowlisted synthetic
+map/comparison/test artifacts. Source commits now on master include f5a68b7
+(extraction), 55f866c (collision/texture cache), a1dae8f (batches/streaming packages)
+and d5c6a79 (LOD previews/budgets). No runtime/gameplay verification claimed.
+
+Next highest-value cloud milestone: bootstrap placement/type metadata and inventory
+collision bounds, then test source-version changes, receipt corruption and nested
+archive selection with original synthetic protocol fixtures. Real GTA integration
+still needs authorized local installation/keys; current extraction requires seed
+YMAP/YTYP exports and supplied mount/TXD policy. Hash-only references remain partial.
+Batch packages share a fixed legacy level ID and cannot be installed together;
+composed-map packaging and runtime chunk streaming remain future integration.
+Experimental LOD previews stay outside ZIPs pending visual/topology validation.
+
+Standing automatic merge authorization and original 180/276 overall budget rules
+are persisted in AGENTS.md. Latest balance remains user-reported 426, not a current
+meter reading; session usage cannot be measured. Qualitative completion estimate:
+meaningful source automation/scalability progress; no measured change in actual
+converted/drivable territory and no defensible whole-project percentage.
