@@ -186,3 +186,18 @@ check pass. Seed placement/type metadata is required; hash-only references, actu
 mount metadata and native collision-bounds inventory remain gaps. No actual game
 archives or keys were accessed. Current balance remains last user report 426;
 original 180 cloud total/276 local reserve applies, with no live usage meter.
+
+### Shared collision/texture cache and measured synthetic memory
+
+Extraction PR #11 merged after Windows/Linux Python tests, native build and protocol
+smoke check passed; master includes merge 7de401e. Extended shared caching to
+world-space collision meshes with per-region translation and binary normalized DDS
+payloads. Cache hits stream verified texture payloads; duplicate outputs share one
+blob. Opt-in repair quarantines invalid entries without deletion; default remains
+fail-fast. Cached/uncached synthetic builds including visuals, collision and texture
+produce identical ZIPs and conversion reports. 35 tests are covered by the suite.
+
+One Linux Python 3.12.14 synthetic 1024x1024 alpha-DDS observation: cold 0.05654 s /
+13,633,380 traced Python peak bytes; warm 0.01412 s / 2,103,635 bytes. Input 1,048,704
+bytes, output 4,194,432 bytes; outputs identical. Single observation, not RSS, real
+asset workload, streaming or BeamNG performance. Benchmark script is reproducible.

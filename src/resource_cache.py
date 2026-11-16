@@ -8,9 +8,10 @@ import tempfile
 
 
 class ResourceCache:
-    def __init__(self, root):
+    def __init__(self, root, recover=False):
         self.root = Path(root)
-        self.hits = self.misses = 0
+        self.hits = self.misses = self.recovered = 0
+        self.recover = recover
         self.pipeline = {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(__file__).parent.glob('*.py')}
 
     def path(self, key):
@@ -20,13 +21,24 @@ class ResourceCache:
     def get(self, key):
         path = self.path(key)
         if not path.exists(): self.misses += 1; return None
-        envelope = json.loads(path.read_text(encoding='utf-8'))
-        if envelope.get('key') != key: raise ValueError('Shared cache key mismatch')
-        payload = envelope['payload']
-        if envelope['sha256'] != hashlib.sha256(payload.encode()).hexdigest():
-            raise ValueError('Corrupt shared cache entry: '+key)
+        try:
+            envelope = json.loads(path.read_text(encoding='utf-8'))
+            if envelope.get('key') != key: raise ValueError('Shared cache key mismatch')
+            payload = envelope['payload']
+            if envelope['sha256'] != hashlib.sha256(payload.encode()).hexdigest():
+                raise ValueError('Corrupt shared cache entry: '+key)
+            result=json.loads(payload)
+        except (ValueError,KeyError,TypeError):
+            if not self.recover: raise
+            self.quarantine(path); self.misses += 1; return None
         self.hits += 1
-        return json.loads(payload)
+        return result
+
+    def quarantine(self, path):
+        import uuid
+        folder=self.root/'quarantine'; folder.mkdir(parents=True,exist_ok=True)
+        path.rename(folder/(path.name+'.'+uuid.uuid4().hex))
+        self.recovered += 1
 
     def put(self, key, value):
         path = self.path(key)
@@ -70,3 +82,62 @@ def cached_drawable(cache, xml, name, materials, textures, report, convert):
     report['degenerate_triangles_removed'] += entry['degenerate_triangles_removed']
     if entry['skipped_skinned_models']: report.setdefault('skipped_skinned_models',set()).update(entry['skipped_skinned_models'])
     return [{k:np.asarray(v,dtype=int if k=='i' else float) if k in ('v','i','n','uv') and v is not None else v for k,v in mesh.items()} for mesh in entry['meshes']]
+
+
+def hash_file(path):
+    digest=hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for block in iter(lambda:stream.read(1024*1024),b''): digest.update(block)
+    return digest.hexdigest()
+
+
+def cached_collision(cache, xml, origin, report, convert):
+    """Store world-space collision once; translate independently for each region."""
+    import collections
+    import numpy as np
+    config={'operation':'collision-v1','source':hash_file(xml),'numpy':np.__version__,'pipeline':cache.pipeline}
+    key=hashlib.sha256(json.dumps(config,sort_keys=True).encode()).hexdigest()
+    entry=cache.get(key)
+    if entry is None:
+        local={'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0}
+        meshes=convert(xml,np.zeros(3),local)
+        entry={'meshes':[{k:v.tolist() if isinstance(v,np.ndarray) else v for k,v in mesh.items()} for mesh in meshes],
+               'unsupported':dict(local['unsupported_collision']),'degenerate':local['degenerate_triangles_removed']}
+        cache.put(key,entry)
+    report['unsupported_collision'].update(entry['unsupported'])
+    report['degenerate_triangles_removed']+=entry['degenerate']
+    meshes=[{**m,'v':np.asarray(m['v'],dtype=float)-origin,'i':np.asarray(m['i'],dtype=int)} for m in entry['meshes']]
+    return meshes
+
+
+def cached_texture(cache, source, target, normalize):
+    """Verified binary payloads stream to new output files on cache hits."""
+    import shutil
+    config={'operation':'normalized-dds-v1','source':hash_file(source),'pipeline':cache.pipeline}
+    key=hashlib.sha256(json.dumps(config,sort_keys=True).encode()).hexdigest()
+    entry=cache.get(key)
+    if entry is not None:
+        blob=cache.root/'blobs'/(entry['sha256']+'.bin')
+        if not blob.is_file() or hash_file(blob)!=entry['sha256']:
+            if not cache.recover: raise ValueError('Corrupt texture cache payload')
+            cache.quarantine(cache.path(key))
+            if blob.exists(): cache.quarantine(blob)
+            entry=None
+    if entry is None:
+        data,repaired=normalize(Path(source).read_bytes())
+        digest=hashlib.sha256(data).hexdigest(); blob=cache.root/'blobs'/(digest+'.bin')
+        blob.parent.mkdir(parents=True,exist_ok=True)
+        if blob.exists() and hash_file(blob)!=digest:
+            if not cache.recover: raise ValueError('Corrupt texture cache payload')
+            cache.quarantine(blob)
+        descriptor,temporary=tempfile.mkstemp(dir=blob.parent,suffix='.tmp')
+        try:
+            with os.fdopen(descriptor,'wb') as stream:
+                stream.write(data); stream.flush(); os.fsync(stream.fileno())
+            try: os.link(temporary,blob)
+            except FileExistsError:
+                if hash_file(blob)!=digest: raise ValueError('Conflicting texture cache payload')
+        finally: Path(temporary).unlink(missing_ok=True)
+        entry={'sha256':digest,'repaired':bool(repaired)}; cache.put(key,entry)
+    shutil.copyfile(blob,target)
+    return entry['repaired']

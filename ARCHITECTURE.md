@@ -55,3 +55,9 @@ verified receipts. Archive priorities/parent TXDs require explicit supplied poli
 collision selection requires inventory bounds. Native inventory currently only
 provides names/sizes, so collision bounds stay unknown by default. The Python adapter
 verifies receipts and builds scoped texture policy; it does not decode archives.
+
+Shared collision entries retain world-space geometry and translate on replay, so
+neighboring origins share conversion work. Texture cache metadata references
+verified content-addressed binary payloads. Warm texture publication streams rather
+than materializing output bytes in Python. Optional repair quarantines corrupt
+metadata/payloads; no old build is overwritten. Mesh JSON still loads in full.
