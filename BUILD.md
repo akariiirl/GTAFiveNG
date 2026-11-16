@@ -100,3 +100,15 @@ Alternatively use `--center X Y --radius R`. The planner returns selected placem
 asset names, chunk memberships, resolved export filenames and unresolved names.
 `planning.reconcile(plan, source, previous)` verifies task bytes; pending tasks may
 be retried by a future archive extraction adapter. It never writes source files.
+
+Compare two existing conversion reports without overwriting earlier evidence:
+
+```bash
+.venv/bin/python src/reporting.py generated/build-before generated/build-after generated/comparison-new
+.venv/bin/python tools/run_tests.py --output ci-synthetic/test-summary.json
+```
+
+Comparisons count resources/triangles, not geographic or gameplay completion.
+Source fingerprints appear in the JSON. Progress maps additionally emit
+`asset_density.png` (converted placements per bin, with unresolved placements).
+CI uploads only original synthetic comparison PNG/JSON and a test-result summary.

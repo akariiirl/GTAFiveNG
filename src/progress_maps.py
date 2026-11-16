@@ -83,6 +83,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
     summary={'checkpoint':checkpoint,'generated_utc':now.isoformat(),'build_date_utc':datetime.datetime.fromtimestamp((build/'conversion_report.json').stat().st_mtime,datetime.timezone.utc).isoformat(),'build':str(build),'report_sha256':digest,'coordinates':'GTA V original XY metres, Z up','raster_resolution_m':resolution,'raster_bounds_xy':[lo.tolist(),hi.tolist()],
       'exported_projected_area_m2':int(m['visual'].sum())*resolution**2,'exported_road_projected_area_m2':int(m['roads'].sum())*resolution**2,'road_xy_collision_overlap_percent':float((m['roads']&m['collision']).sum()/max(1,m['roads'].sum())*100),
       'asset_completeness':{'expected_instances_in_available_selected_ymaps':len(expected),'converted_matching_instances':len(expected)-len(absent),'percent':100*(len(expected)-len(absent))/len(expected) if expected else None,'missing_placements':len(absent)},
+      'missing_texture_names':report.get('missing_textures',[]),'dependency_resolution':report.get('dependency_resolution',{}),
       'whole_island_exported_area_percent':None,'whole_island_verified_drivable_percent':None,'verified_drivable_area_m2':None,'verified_driving_evidence':[],
       'sampled_collision_check':{k:v for k,v in (surfaces or {}).items() if k!='failures'},'documented_collision_failure_points':len(failures),
       'limitations':['Projected raster area is approximate; overlapping floors count once; thin geometry can be overestimated by one pixel.','XY collision overlap ignores height and is not drivable coverage.','No telemetry is attributed automatically to a build; green requires explicit build-matched evidence.','Full-island land boundary unavailable in existing project data. Whole-island area and percentages are null.','Available selected YMAPs are a partial source inventory, not the full island.','Build date is report modification time; source report has no embedded build timestamp.']}
@@ -127,6 +128,16 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
         fig.text(.12,.025,f"Build: {summary['build_date_utc'][:19]} UTC | Raster: {resolution:g} m | Exported footprint: {summary['exported_projected_area_m2']/1e6:.3f} km²\nSelected asset completeness: {summary['asset_completeness']['percent']:.1f}% | Island completion: unknown | Verified drivable area: unmeasured",fontsize=10)
         fig.subplots_adjust(bottom=.22,top=.9); fig.savefig(folder/filename,dpi=220); plt.close(fig)
     plot('detail','neighborhood_progress.png'); plot('world','world_progress.png'); plot('heat','conversion_heatmap.png')
+    fig,ax=plt.subplots(figsize=(10,8))
+    positions=np.array([np.array(o['position'])+origin for o in visual])
+    density=ax.hexbin(positions[:,0],positions[:,1],gridsize=30,mincnt=1,cmap='Blues')
+    fig.colorbar(density,ax=ax,label='Converted visual placements per bin')
+    if missing_positions:
+        missing=np.array(missing_positions); ax.scatter(missing[:,0],missing[:,1],marker='x',c='#e8bf29',label='Unresolved placement'); ax.legend()
+    ax.set_title('Exported placement density | missing texture names: '+str(len(report.get('missing_textures',[]))))
+    ax.set_xlabel('GTA X (m)'); ax.set_ylabel('GTA Y (m)'); ax.set_aspect('equal')
+    fig.text(.02,.01,'Available selected inputs only. Texture misses have no inferred geographic footprint. Driving coverage unknown.')
+    fig.savefig(folder/'asset_density.png',dpi=120); plt.close(fig)
     (folder/'progress_summary.json').write_text(json.dumps(summary,indent=2))
     # Root files are latest convenience copies; immutable timestamped milestones remain.
     import shutil

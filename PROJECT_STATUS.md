@@ -108,3 +108,23 @@ finite quaternion and primitive argument validation, and no-collision diagnostic
 Surface tests show missing hits without collision and aligned hits with an original
 synthetic road/collision triangle. These are sampled geometry checks, not verified
 drivable territory. Actual neighborhood03 collision miss remains unassessed locally.
+
+### Issue #2 E — reporting and cross-platform CI
+
+Collision PR #6 passed both GitHub Actions runs (43902148783, 43902129083).
+Added immutable count-comparison PNG/JSON with source report hashes, signed deltas,
+selection comparison and explicit unknown island/driving coverage. Progress maps
+now include placement-density PNG and missing texture names/dependency provenance
+in summaries, without assigning texture misses invented geographic footprints.
+25 Linux tests pass. CI now tests Python on Windows and Linux and uploads only an
+explicit allowlist of synthetic comparison/test evidence; reader compilation stays
+on Linux. CI outcomes for the new matrix must be checked before claiming Windows
+verification. No actual game map images or game-derived assets were uploaded.
+
+Roadmap remains partial: scoped texture lookup is an API pending converter wiring;
+DLC mount metadata still requires an extraction adapter; plans don't extract game
+archives; residency/LOD are offline policies, not engine streaming or simplified
+meshes. No resource/performance benchmark beyond synthetic tests is claimed. Credit
+usage/balance remains unavailable, so preserving the exact 60-credit reserve cannot
+be certified. This bounded pass stops after CI review rather than launching large,
+unmetered integration work. PRs #3–#7 are stacked; review/merge in numerical order.

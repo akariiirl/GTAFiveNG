@@ -4,9 +4,14 @@ permissions:
   contents: read
 jobs:
   python:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     env:
       MPLBACKEND: Agg
+      SYNTHETIC_ARTIFACT_DIR: ci-synthetic
+      MPLCONFIGDIR: .mpl-ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,7 +20,16 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-cloud.txt
       - run: python -m pip install -r requirements-cloud.txt
-      - run: python -m unittest discover -s tests -v
+      - run: python tools/run_tests.py --output ci-synthetic/test-summary.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synthetic-evidence-${{ matrix.os }}
+          path: |
+            ci-synthetic/test-summary.json
+            ci-synthetic/comparison.json
+            ci-synthetic/comparison.png
+          retention-days: 14
   reader:
     runs-on: ubuntu-latest
     steps:

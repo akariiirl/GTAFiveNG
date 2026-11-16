@@ -29,3 +29,12 @@ selected-instance counts, unknown island percentages and preservation of earlier
 milestones. These images are test evidence only, not converted GTA territory.
 No new actual Los Santos milestone image can be generated without local exports.
 Comparison PNGs, asset density and build-to-build summaries remain outstanding.
+
+Issue #2 additions: `asset_density.png` plots converted placement counts, with
+unresolved placement markers. The subtitle gives the count of missing texture
+names; no texture failure area is inferred. `progress_summary.json` includes those
+names and dependency-resolution provenance. Existing three map PNGs are preserved.
+`src/reporting.py BEFORE_BUILD AFTER_BUILD NEW_OUTPUT` generates immutable
+`comparison.png` and `comparison.json` with counts, deltas, report hashes and whether
+region selections match. These counts are not a geographic coverage comparison;
+whole-island completion and verified driving area remain unknown.
