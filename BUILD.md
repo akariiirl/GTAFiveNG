@@ -267,3 +267,7 @@ only identical canonical collision shapes deduplicate. No runtime streaming impl
 The exact PC-return setup, one-command dry-run/execution, interruption recovery,
 policy diagnostics and isolated launch commands are in `docs/LOCAL_EXECUTION.md`.
 The PowerShell entrypoint is `tools/run_local.ps1`; it invokes `local_workflow.py`.
+
+`src/runtime_plan.py` exports a separate experimental prefab/asset tree from a
+composed build. See `docs/RUNTIME_EXPERIMENT.md`; no normal package/profile changes.
+Pinned Lupa runs source-only Lua adapter mocks in CI, not a BeamNG engine.

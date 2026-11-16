@@ -300,3 +300,18 @@ synthetic integration simulates the reader and tests interruption/recovery throu
 an isolated package. Windows CI checks the PowerShell dry-run; Linux skips that test
 when pwsh is absent. Actual native game decoding and BeamNG launch remain unverified.
 PC-return commands and exact blockers are recorded in docs/LOCAL_EXECUTION.md.
+
+### Isolated prefab/chunk prototype
+
+Local workflow PR #18 merged as 7aa8a49 after Windows/Linux/native CI passed;
+Windows specifically executed the PowerShell dry-run. Added a separate experimental
+prefab export and Lua controller based on official prefab format/fields and public
+Lua creation/FS/log references. Scene registration/deletion bindings remain guarded
+and engine-unverified. Shared boundary objects have one owner with dependency closure.
+Mock-adapter tests execute real Lua (pinned Lupa) for load/unload/reload, missing files,
+cycles, budgets and cleanup failure retention. Export tests ensure normal ZIP bytes
+stay unchanged and objects are not duplicated across owned prefabs. File estimates
+and Lua heap are explicitly not engine/GPU memory. No automatic prototype activation;
+normal local workflow/launch remains offline composition. Runtime research sources
+and exact isolated experiment are in docs/RUNTIME_EXPERIMENT.md. Actual engine
+loading/physics/memory/streaming still requires local testing.
