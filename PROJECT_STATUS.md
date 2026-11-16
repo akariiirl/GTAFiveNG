@@ -67,3 +67,7 @@ source checks passed. Both Git push and the connected GitHub create-branch API
 returned HTTP 403 (API: Resource not accessible by integration). No remote branch
 or PR was created. Repository contents/actions write permission is needed before
 `git push -u origin dev/cloud-foundation-regions` and opening a PR against master.
+
+Publication update: Git push subsequently succeeded on 2026-11-16. The development
+branch `dev/cloud-foundation-regions` is now saved on origin; the earlier HTTP 403
+publication blocker is resolved for Git push.
