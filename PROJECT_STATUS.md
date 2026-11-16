@@ -257,3 +257,19 @@ are persisted in AGENTS.md. Latest balance remains user-reported 426, not a curr
 meter reading; session usage cannot be measured. Qualitative completion estimate:
 meaningful source automation/scalability progress; no measured change in actual
 converted/drivable territory and no defensible whole-project percentage.
+
+## Final cloud preparation — native bootstrap milestone
+
+Latest user budget supersedes prior allocations: 380 remaining out of 500, 120 spent,
+preserve 320 for local work and target no more than 60 additional cloud credits.
+No live usage meter; no enforcement/usage claim is made.
+Native --bootstrap now discovers/export YMAP/YTYP metadata without previous XML,
+inventories supported resource paths and transformed native YBN bounds, and retains
+content-addressed snapshots with per-resource verified resume checkpoints. Full outer
+archive SHA-256 plus reader/resource identity invalidates snapshots. Provenance is
+recorded; mount order is not guessed. Hash-only reference strings remain diagnostic.
+Native synthetic checks cover nested archive paths, child transforms, missing/invalid
+bounds, hash diagnostics, decode-free resume and source invalidation. A malformed
+synthetic Geometry child was corrected to a valid Box fixture; native checks pass.
+Real GTA archive/keys and engine semantics remain unverified. Python collision planner
+tests cover boundary intersection and invalid bounds. Legacy reader modes retained.

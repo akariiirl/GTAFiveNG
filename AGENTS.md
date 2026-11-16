@@ -21,9 +21,9 @@ If blocked, record the exact blocker and continue independent authorized work.
 Do not leave passing completed PRs open unnecessarily. This standing authorization
 satisfies the earlier requirement to obtain user approval before pushing.
 
-Original overall budget remains at most 180 cloud credits and at least 276 reserved
-for local work. Latest user-reported balance was 426 for the entire project; do not
-reuse 456 as a current balance or reset allocations per session. Tools do not expose
-a live credit meter; never invent usage or claim to enforce a cap. Continue small,
-verified cloud milestones, avoid large uncertain work, and preserve local budget.
+Latest user budget (final cloud preparation): 380 credits remaining out of 500,
+120 spent, preserve 320 for local GTA V/BeamNG work, target at most 60 additional
+cloud credits. These supersede earlier balance/allocation statements. This is a
+planning target, not a metered cap. Tools expose no live usage; never invent credit
+consumption or claim to enforce it. Keep milestones small and avoid uncertain work.
 Never access local installations/desktops or upload proprietary assets in cloud.

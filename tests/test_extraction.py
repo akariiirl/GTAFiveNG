@@ -44,3 +44,14 @@ class ExtractionTests(unittest.TestCase):
             with self.assertRaises(FileExistsError): execute({'schema':1,'tasks':[]},'r','g',root/'out',root/'plan.json',runner)
             def failure(command,check): return types.SimpleNamespace(returncode=1)
             with self.assertRaises(RuntimeError): execute(plan,'r','g',root/'out',root/'plan.json',failure)
+
+    def test_collision_boundary_and_invalid_metadata(self):
+        with tempfile.TemporaryDirectory() as d:
+            source=Path(d)/'source'; fixture(source)
+            inventory=[{'path':'base.rpf/edge.ybn','bounds_xy':[10,0,11,1]},
+                       {'path':'base.rpf/outside.ybn','bounds_xy':[11,0,12,1]}]
+            result=build_tasks(source,inventory,bbox=[0,-1,10,1])
+            self.assertIn('base.rpf/edge.ybn',{t['path'] for t in result['tasks']})
+            self.assertNotIn('base.rpf/outside.ybn',{t['path'] for t in result['tasks']})
+            inventory[0]['bounds_xy']=[float('nan'),0,1,1]
+            with self.assertRaises(ValueError): build_tasks(source,inventory,bbox=[0,-1,10,1])

@@ -9,6 +9,28 @@ if (args.Length == 2 && args[0] == "--validate-plan")
     Console.WriteLine(JsonSerializer.Serialize(paths.Select(path => new { path, export = ExtractionPlan.ExportName(path) })));
     return 0;
 }
+if (args.Length == 2 && args[0] == "--inspect-ybn-xml")
+{
+    Console.WriteLine(JsonSerializer.Serialize(MetadataInventory.BoundsXY(XmlYbn.GetYbn(File.ReadAllText(args[1])).Bounds)));
+    return 0;
+}
+if (args.Length == 3 && args[0] == "--bootstrap-fixture")
+{
+    using var fixture=JsonDocument.Parse(File.ReadAllText(args[1]));
+    var sources=new List<CatalogSource>();
+    foreach(var item in fixture.RootElement.EnumerateArray())
+    {
+        var path=ExtractionPlan.Normalize(item.GetProperty("path").GetString());
+        var xml=item.TryGetProperty("xml",out var x)?x.GetString():null;
+        var bounds=item.TryGetProperty("bounds_xml",out var b)?b.GetString():null;
+        var fail=item.TryGetProperty("fail_decode",out var f)&&f.GetBoolean();
+        sources.Add(new CatalogSource(path,(xml??bounds??"").Length,path[..(path.IndexOf(".rpf")+4)],MetadataInventory.Hash(path+(xml??"")+(bounds??"")),
+            xml==null?null:()=>fail?throw new Exception("Synthetic decode failure"):xml,
+            bounds==null?null:()=>MetadataInventory.BoundsXY(XmlYbn.GetYbn(bounds).Bounds)));
+    }
+    Directory.CreateDirectory(args[2]); var result=MetadataInventory.Run(args[2],sources);
+    Console.WriteLine(JsonSerializer.Serialize(new{snapshot=result.Directory,errors=result.Errors})); return result.Errors==0?0:1;
+}
 // The source installation is opened only through CodeWalker's read APIs.
 if (args.Length < 2) { Console.Error.WriteLine("Usage: AssetReader GTA_ROOT OUTPUT_DIRECTORY [name-filter]"); return 2; }
 var root = Path.GetFullPath(args[0]);
@@ -16,19 +38,41 @@ var output = Path.GetFullPath(args[1]);
 if (output.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || output == root)
     throw new ArgumentException("Output must be outside the game installation");
 if (args.Length > 2 && args[2] == "--tasks" && args.Length != 4) throw new ArgumentException("--tasks requires a plan path");
+var bootstrapMode = args.Length == 3 && args[2] == "--bootstrap";
 var taskMode = args.Length == 4 && args[2] == "--tasks";
 var taskPaths = taskMode ? ExtractionPlan.Load(args[3]).ToHashSet(StringComparer.OrdinalIgnoreCase) : null;
 Directory.CreateDirectory(output);
-using var taskLock = taskMode ? new FileStream(Path.Combine(output,".extraction.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None) : null;
+using var taskLock = (taskMode || bootstrapMode) ? new FileStream(Path.Combine(output,".extraction.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None) : null;
 GTA5Keys.LoadFromPath(root);
 var manager = new RpfManager();
 using var errors = new StreamWriter(Path.Combine(output, "errors.log"), append:true);
 errors.WriteLine("Run started " + DateTime.UtcNow.ToString("O"));
 var cachePath = Path.Combine(output,"source-cache.json");
 var cache = File.Exists(cachePath) ? JsonSerializer.Deserialize<Dictionary<string,string>>(File.ReadAllText(cachePath)) : new Dictionary<string,string>();
-manager.Init(root, false, s => Console.WriteLine(s), s => { errors.WriteLine(s); errors.Flush(); }, rootOnly: !taskMode);
-using var inventory = new StreamWriter(Path.Combine(output, "inventory.jsonl"));
+manager.Init(root, false, s => Console.WriteLine(s), s => { errors.WriteLine(s); errors.Flush(); }, rootOnly: !(taskMode || bootstrapMode));
 var entries = manager.EntryDict.Values.OfType<RpfFileEntry>().OrderBy(e => e.Path).ToArray();
+if (bootstrapMode)
+{
+    var hashes=new Dictionary<string,string>();
+    var readerHash=MetadataInventory.Hash(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(typeof(MetadataInventory).Assembly.Location))));
+    var catalog=new List<CatalogSource>();
+    foreach(var entry in entries)
+    {
+        var physicalPath=entry.Path.Replace('\\','/');
+        var path=physicalPath.ToLowerInvariant();
+        if (!new[]{".ymap",".ytyp",".ydr",".ydd",".yft",".ytd",".ybn"}.Contains(Path.GetExtension(path))) continue;
+        var end=path.IndexOf(".rpf",StringComparison.OrdinalIgnoreCase); if(end<0) continue;
+        var archive=path[..(end+4)];
+        if(!hashes.TryGetValue(archive,out var hash))
+        { using var stream=File.OpenRead(Path.Combine(root,physicalPath[..(end+4)].Replace('/',Path.DirectorySeparatorChar))); hash=Convert.ToHexString(SHA256.HashData(stream)); hashes[archive]=hash; }
+        var fingerprint=MetadataInventory.Hash(readerHash+":"+hash+":"+path+":"+entry.GetFileSize());
+        Func<string> metadata=path.EndsWith(".ymap") ? ()=>MetaXml.GetXml(manager.GetFile<YmapFile>(entry),out _) : path.EndsWith(".ytyp") ? ()=>MetaXml.GetXml(manager.GetFile<YtypFile>(entry),out _) : null;
+        Func<float[]> bounds=path.EndsWith(".ybn") ? ()=>MetadataInventory.BoundsXY(manager.GetFile<YbnFile>(entry)?.Bounds) : null;
+        catalog.Add(new CatalogSource(path,entry.GetFileSize(),archive,fingerprint,metadata,bounds));
+    }
+    var result=MetadataInventory.Run(output,catalog); Console.WriteLine(result.Directory); return result.Errors==0?0:1;
+}
+using var inventory = new StreamWriter(Path.Combine(output, "inventory.jsonl"));
 foreach (var entry in entries)
     inventory.WriteLine(JsonSerializer.Serialize(new { path = entry.Path, name = entry.Name, size = entry.GetFileSize() }));
 Console.WriteLine($"Indexed {entries.Length} resources across {manager.AllRpfs.Count} archives.");
