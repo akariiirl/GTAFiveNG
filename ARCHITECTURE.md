@@ -39,3 +39,11 @@ installed game's active mount metadata remains deferred integration work.
 origin/radius. Box builds select whole placements, translate about the midpoint,
 and preserve the prior collision-by-visual-extent policy. Cache IDs distinguish
 boxes from circles even with equal centers and circumscribed radii.
+
+`resource_cache.py` adds opt-in persistent drawable conversion reuse under a region
+workspace. Hash keys cover source XML/member, name, available texture bindings,
+pipeline source and NumPy version. Verified immutable JSON entries hold mesh arrays
+and replayable material/texture/diagnostic effects; no pickle is used. Atomic
+no-clobber publication protects interrupted/concurrent writes. Packaging stays
+self-contained; cached/uncached synthetic packages match byte-for-byte. This is
+conversion CPU reuse, not runtime resource sharing or bounded-memory processing.
