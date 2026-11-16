@@ -1,8 +1,9 @@
 """Local CodeWalker XML -> BeamNG static geometry prototype. No game writes."""
 from pathlib import Path
-import argparse, collections, hashlib, json, math, shutil, zipfile, struct
+import argparse, collections, hashlib, json, math, shutil, zipfile, struct, re
 import xml.etree.ElementTree as ET
 import numpy as np
+from primitives import rounded_shape
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = 'http://www.collada.org/2005/11/COLLADASchema'
@@ -23,6 +24,15 @@ def value(e, path, default=0):
 def normalized_dds(data):
     """Retain all complete BC mip levels; CodeWalker can export partial tail blocks."""
     if data[:4]!=b'DDS ' or len(data)<128: raise ValueError('Invalid DDS header')
+    pixel_flags=struct.unpack_from('<I',data,80)[0]
+    if pixel_flags==2 and struct.unpack_from('<I',data,88)[0]==8:
+        # BeamNG rejects alpha-only DDS. Preserve alpha in an ordinary RGBA
+        # image, with zero RGB (the source alpha-only texture has no RGB data).
+        height,width=struct.unpack_from('<II',data,12)
+        header=bytearray(data[:128]); struct.pack_into('<I',header,20,width*4)
+        struct.pack_into('<7I',header,80,0x41,0,32,0x00ff0000,0x0000ff00,0x000000ff,0xff000000)
+        payload=bytearray(len(data[128:])*4); payload[3::4]=data[128:]
+        return bytes(header+payload),True
     fourcc=data[84:88]
     if fourcc not in (b'DXT1',b'DXT3',b'DXT5'): return data,False
     height,width=struct.unpack_from('<II',data,12)
@@ -93,18 +103,36 @@ def quat_matrix(e):
                      [2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)]])
 
 def drawable(xml, name, materials, textures, report):
-    root=ET.parse(xml).getroot(); shaders=root.findall('ShaderGroup/Shaders/Item')
+    document=ET.parse(xml).getroot()
+    root=document.find('Drawable') if document.tag=='Fragment' else document
+    if root is None: return []
+    shaders=root.findall('ShaderGroup/Shaders/Item')
+    poses=[np.fromstring(p.text,sep=' ').reshape(3,4) for p in document.findall('BoneTransforms/Item')]
+    transforms={}
+    for model in root.findall('DrawableModelsHigh/Item'):
+        bone=int(value(model,'BoneIndex'))
+        transform=poses[bone] if bone<len(poses) else np.eye(4)[:3]
+        for geometry in model.findall('Geometries/Item'):
+            transforms[id(geometry)]=(transform, bool(value(model,'HasSkin')))
     meshes=[]
     for k,g in enumerate(root.findall('DrawableModelsHigh/Item/Geometries/Item')):
+        transform,skinned=transforms[id(g)]
+        if skinned:
+            report.setdefault('skipped_skinned_models',set()).add(name)
+            continue
         layout=list(g.find('VertexBuffer/Layout')); data=g.findtext('VertexBuffer/Data','').strip().splitlines()
         widths={'Position':3,'Normal':3,'Colour0':4,'Colour1':4,'Tangent':4,'BlendWeights':4,'BlendIndices':4}
+        # CodeWalker separates semantic fields by three spaces. Some Legacy
+        # layouts store a four-component packed normal rather than XYZ alone.
+        groups=re.split(r'\s{2,}',data[0].strip())
+        if len(groups)==len(layout): widths.update({f.tag:len(group.split()) for f,group in zip(layout,groups)})
         offsets={}; cursor=0
         for f in layout:
             n=widths.get(f.tag,2 if f.tag.startswith('TexCoord') else None)
             if n is None: raise ValueError('Unsupported vertex field '+f.tag)
             offsets[f.tag]=(cursor,cursor+n); cursor+=n
         a=np.array([[float(x) for x in line.split()] for line in data])
-        if a.shape[1]!=cursor: raise ValueError('Vertex layout mismatch')
+        if a.shape[1]!=cursor: raise ValueError(f'Vertex layout mismatch: {name}, {[f.tag for f in layout]}, {a.shape[1]} != {cursor}')
         v=a[:,slice(*offsets['Position'])]
         ix=np.fromstring(g.findtext('IndexBuffer/Data',''),sep=' ',dtype=int)
         idx,deg=valid_mesh(v,ix); report['degenerate_triangles_removed']+=deg
@@ -120,7 +148,12 @@ def drawable(xml, name, materials, textures, report):
             if any(s in shader.findtext('FileName','') for s in ('cutout','trees','foliage')):
                 materials[mat].update(alphaTest=True,alphaRef=100)
             if shader.findtext('Name','')=='decal': materials[mat].update(translucent=True,translucentBlendOp='Lerp',translucentZWrite=False)
-        normal=a[:,slice(*offsets['Normal'])] if 'Normal' in offsets else None
+        normal=a[:,offsets['Normal'][0]:offsets['Normal'][0]+3] if 'Normal' in offsets else None
+        v=v@transform[:,:3].T+transform[:,3]
+        if normal is not None:
+            normal=normal@np.linalg.inv(transform[:,:3])
+            lengths=np.linalg.norm(normal,axis=1,keepdims=True)
+            normal=normal/np.maximum(lengths,1e-12)
         uv=a[:,slice(*offsets['TexCoord0'])].copy() if 'TexCoord0' in offsets else None
         if uv is not None: uv[:,1]=1-uv[:,1]
         meshes.append({'v':v,'n':normal,'uv':uv,'i':idx,'material':mat})
@@ -139,7 +172,6 @@ def bounds_mesh(xml,origin,report):
             report['unsupported_collision'][b.get('type','unknown')]+=1; return
         v=np.array([[float(n) for n in row.strip().split(',')] for row in raw.strip().splitlines()])
         v+=vec(b.find('GeometryCenter'))
-        v=(np.column_stack([v,np.ones(len(v))])@matrix)[:,:3]-origin
         ix=[]
         extra=[]
         for p in b.find('Polygons'):
@@ -153,8 +185,15 @@ def bounds_mesh(xml,origin,report):
                 faces=np.array([[0,2,1],[0,3,2],[4,5,6],[4,6,7],[0,1,5],[0,5,4],[1,2,6],[1,6,5],[2,3,7],[2,7,6],[3,0,4],[3,4,7]])
                 if np.linalg.det(np.array(edges))<0: faces=faces[:,::-1]
                 start=len(v)+len(extra); extra.extend(corners); ix.extend(faces+start)
+            elif p.tag in ('Sphere','Capsule','Cylinder'):
+                startpoint=v[int(p.get('v',p.get('v1','0')))]
+                endpoint=startpoint if p.tag=='Sphere' else v[int(p.get('v2'))]
+                points,faces=rounded_shape(startpoint,endpoint,float(p.get('radius')),p.tag)
+                start=len(v)+len(extra); extra.extend(points); ix.extend(faces+start)
             else: report['unsupported_collision'][p.tag]+=1
         if extra: v=np.concatenate([v,np.array(extra)])
+        v=(np.column_stack([v,np.ones(len(v))])@matrix)[:,:3]-origin
+        if np.linalg.det(matrix[:3,:3])<0: ix=np.asarray(ix)[:,::-1]
         if ix:
             idx,deg=valid_mesh(v,ix); report['degenerate_triangles_removed']+=deg
             meshes.append({'v':v,'i':idx,'material':'lsf_collision','node':'Colmesh-1'})
@@ -175,8 +214,9 @@ def build(source,output,center,radius):
     level.mkdir(parents=True,exist_ok=True)
     report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'radius':radius,'in_game_verified':False}
     textures={p.stem.lower():{'path':p,'used':False} for p in sorted(source.glob('*.dds'))}
-    drawables={p.name.split('.rpf_')[-1][:-8]:p for p in source.glob('*.ydr.xml')}
-    materials={}; objects=[]; converted={}; used=set()
+    drawables={p.name.split('.rpf_')[-1][:-8]:p for pattern in ('*.yft.xml','*.ydr.xml') for p in sorted(source.glob(pattern))}
+    materials={}; objects=[]; converted={}; used=set(); local_bounds={}
+    coverage_lo=np.array([np.inf,np.inf]); coverage_hi=-coverage_lo
     for p in sorted(source.glob('*.ymap.xml')):
         if any(s in p.name for s in ('oldbill','newbill')): continue
         for e in ET.parse(p).getroot().findall('entities/Item'):
@@ -190,6 +230,12 @@ def build(source,output,center,radius):
                 if not meshes: report['missing_assets'].add(name); continue
                 dae(level/'art/shapes'/f'{name}.dae',meshes)
                 converted[name]=sum(len(m['i']) for m in meshes)
+                vertices=np.concatenate([m['v'] for m in meshes])
+                local_bounds[name]=(vertices.min(axis=0),vertices.max(axis=0))
+            lo,hi=local_bounds[name]
+            corners=np.array([[x,y,z] for x in (lo[0],hi[0]) for y in (lo[1],hi[1]) for z in (lo[2],hi[2])])
+            corners=(corners*np.array([value(e,'scaleXY',1)]*2+[value(e,'scaleZ',1)]))@quat_matrix(e).T+pos
+            coverage_lo=np.minimum(coverage_lo,corners[:,:2].min(axis=0)); coverage_hi=np.maximum(coverage_hi,corners[:,:2].max(axis=0))
             report['visual_triangles']+=converted[name]
             objects.append({'name':'lsf_visual_'+str(len(objects)),'class':'TSStatic','__parent':'Geometry','shapeName':'/levels/los_santos_fazes/art/shapes/'+name+'.dae','position':(pos-origin).tolist(),'rotationMatrix':quat_matrix(e).T.flatten().tolist(),'scale':[value(e,'scaleXY',1)]*2+[value(e,'scaleZ',1)],'collisionType':'None','decalType':'Visible Mesh','meshCulling':True})
             report['visual_instances']+=1
@@ -197,7 +243,7 @@ def build(source,output,center,radius):
         # hi@ and base carry complementary collision, ma@ is weapon-only detail.
         if 'ma@' in p.name: continue
         b=ET.parse(p).getroot().find('Bounds'); lo=vec(b.find('BoxMin')); hi=vec(b.find('BoxMax'))
-        if np.any(hi[:2]<origin[:2]-radius) or np.any(lo[:2]>origin[:2]+radius): continue
+        if np.any(hi[:2]<coverage_lo) or np.any(lo[:2]>coverage_hi): continue
         meshes=bounds_mesh(p,origin,report)
         if not meshes: continue
         name='collision_'+hashlib.sha256(p.name.encode()).hexdigest()[:12]
@@ -222,7 +268,8 @@ def build(source,output,center,radius):
     jsonl(level/'main/MissionGroup/Geometry/items.level.json',objects)
     jsonl(level/'main/MissionGroup/PlayerDropPoints/items.level.json',[{'name':'spawn_default','class':'SpawnSphere','__parent':'PlayerDropPoints','position':[100,50,31],'radius':5,'dataBlock':'SpawnSphereMarker'}])
     jsonl(level/'main/MissionGroup/Sky/items.level.json',[{'name':'theLevelInfo','class':'LevelInfo','__parent':'Sky','globalEnviromentMap':'BNG_Sky_01_cubemap','gravity':-9.81,'visibleDistance':2500,'fogDensity':0.0001}, {'name':'sunsky','class':'ScatterSky','__parent':'Sky','skyBrightness':40,'azimuth':90,'elevation':45}, {'name':'tod','class':'TimeOfDay','__parent':'Sky','time':0.15,'play':False}])
-    for k in ['missing_assets','missing_textures']: report[k]=sorted(report[k])
+    for k in ['missing_assets','missing_textures','skipped_skinned_models']:
+        if k in report: report[k]=sorted(report[k])
     report['textures']=sum(t['used'] for t in textures.values()); report['unique_drawables']=len(converted)
     (output/'conversion_report.json').write_text(json.dumps(report,indent=2))
     print(json.dumps({k:v for k,v in report.items() if k not in ('missing_assets','missing_textures')},indent=2))

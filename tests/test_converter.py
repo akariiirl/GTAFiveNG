@@ -4,8 +4,21 @@ import xml.etree.ElementTree as ET
 import numpy as np
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from convert import valid_mesh, quat_matrix, dae, NS, normalized_dds
+from primitives import rounded_shape
 
 class GeometryTests(unittest.TestCase):
+    def test_alpha_only_dds(self):
+        header=bytearray(128); header[:4]=b'DDS '
+        struct.pack_into('<II',header,12,2,2); struct.pack_into('<I',header,80,2); struct.pack_into('<I',header,88,8)
+        fixed,changed=normalized_dds(bytes(header)+bytes([0,64,128,255]))
+        self.assertTrue(changed); self.assertEqual(fixed[131::4],bytes([0,64,128,255]))
+        self.assertEqual(struct.unpack_from('<I',fixed,80)[0],0x41)
+    def test_capsule_geometry(self):
+        v,f=rounded_shape([0,0,0],[0,0,4],2,'Capsule')
+        self.assertAlmostEqual(v[:,2].min(),-2); self.assertAlmostEqual(v[:,2].max(),6)
+        self.assertEqual(valid_mesh(v,f)[1],0)
+        tris=v[f]; normals=np.cross(tris[:,1]-tris[:,0],tris[:,2]-tris[:,0])
+        self.assertTrue(np.all(np.sum(normals*(tris.mean(axis=1)-[0,0,2]),axis=1)>0))
     def test_truncated_compressed_mip_tail(self):
         header=bytearray(128); header[:4]=b'DDS '; header[84:88]=b'DXT1'
         struct.pack_into('<II',header,12,8,8); struct.pack_into('<I',header,28,4)
