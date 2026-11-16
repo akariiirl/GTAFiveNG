@@ -8,3 +8,22 @@ Read PROJECT_STATUS.md, ARCHITECTURE.md and BUILD.md before changing the project
 - Do not push or create a remote repository without user approval. Before staging, inspect `git status` and `git diff`, and verify staged filenames and contents for proprietary data and secrets. Git ignore rules are safeguards, not a substitute for review.
 - After each major milestone update PROJECT_STATUS.md with date, exact evidence, limitations, blockers and next steps; update BUILD.md or ARCHITECTURE.md when their facts change. Do not claim a drive, visual or performance test without evidence.
 - Do not unnecessarily alter the conversion pipeline. Keep source access read-only and respect LICENSES.md. Treat existing machine paths and ignored local dependencies as examples, not portable defaults.
+
+## Standing user authorization — 2026-11-16
+
+The user explicitly authorizes routine development, testing, committing, pushing,
+and clean PR merges in akariiirl/GTAFiveNG. For each completed milestone: branch
+from updated master, test, review staged source for licensed data/secrets, push,
+open a PR targeting master, wait for **all** CI checks/review requirements, merge
+only when passing and permitted, verify the merge, then update from master and
+continue. Never bypass protections, failing/pending checks or security review.
+If blocked, record the exact blocker and continue independent authorized work.
+Do not leave passing completed PRs open unnecessarily. This standing authorization
+satisfies the earlier requirement to obtain user approval before pushing.
+
+Original overall budget remains at most 180 cloud credits and at least 276 reserved
+for local work. Latest user-reported balance was 426 for the entire project; do not
+reuse 456 as a current balance or reset allocations per session. Tools do not expose
+a live credit meter; never invent usage or claim to enforce a cap. Continue small,
+verified cloud milestones, avoid large uncertain work, and preserve local budget.
+Never access local installations/desktops or upload proprietary assets in cloud.
