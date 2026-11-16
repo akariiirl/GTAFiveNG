@@ -230,3 +230,19 @@ future engine integration. Cell sizes must be increasing, finite and positive.
 Collision limits reject a build before writing an over-budget collision shape/ZIP,
 with `collision_budget.json`; they do not truncate physics or bound the memory used
 to decode a single collision resource. Default conversion remains unchanged.
+
+## Native metadata bootstrap and collision inventory
+
+```powershell
+dotnet src/AssetReader/bin/Release/net8.0/AssetReader.dll $GtaRoot generated/catalog-new --bootstrap
+```
+
+No previous XML exports are needed. `bootstrap.json` points to a content-addressed
+snapshot containing YMAP/YTYP exports and `inventory.jsonl` for supported resources.
+Native YBN bounds conservatively include root/child AABBs under composite transforms.
+Archive paths/fingerprints are provenance, not inferred active mount precedence.
+Hash-only strings remain diagnostics. Outer archives are hashed once per run; their
+content plus reader assembly/resource identity invalidates snapshots. Checkpoints
+verify metadata XML before skipping decode. Interrupted runs resume in the same
+snapshot; prior snapshots are preserved. Invalid bounds/checkpoints fail rather
+than becoming coverage claims. Real installation decoding remains unverified.
