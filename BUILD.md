@@ -263,3 +263,7 @@ verification permits later diagnostics/maps. Converter-native identity collision
 object transforms are supported; arbitrary scene transforms are rejected. Prior
 8-significant-digit mesh exports can retain rounding differences across inputs;
 only identical canonical collision shapes deduplicate. No runtime streaming implied.
+
+The exact PC-return setup, one-command dry-run/execution, interruption recovery,
+policy diagnostics and isolated launch commands are in `docs/LOCAL_EXECUTION.md`.
+The PowerShell entrypoint is `tools/run_local.ps1`; it invokes `local_workflow.py`.
