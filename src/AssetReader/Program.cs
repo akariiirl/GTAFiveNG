@@ -19,7 +19,13 @@ foreach (var entry in entries)
 Console.WriteLine($"Indexed {entries.Length} resources across {manager.AllRpfs.Count} archives.");
 if (args.Length > 2)
 {
-    foreach (var e in entries.Where(e => e.Name.Contains(args[2], StringComparison.OrdinalIgnoreCase)))
+    HashSet<string> requested = null;
+    if (args[2].StartsWith("@"))
+    {
+        var report = JsonDocument.Parse(File.ReadAllText(args[2][1..]));
+        requested = report.RootElement.GetProperty("missing_assets").EnumerateArray().Select(x => x.GetString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+    foreach (var e in entries.Where(e => requested != null ? requested.Contains(Path.GetFileNameWithoutExtension(e.Name)) : e.Name.Contains(args[2], StringComparison.OrdinalIgnoreCase)))
     {
         try
         {
@@ -28,6 +34,9 @@ if (args.Length > 2)
             string xml = null;
             if (e.Name.EndsWith(".ybn")) xml = YbnXml.GetXml(manager.GetFile<YbnFile>(e));
             if (e.Name.EndsWith(".ydr")) xml = YdrXml.GetXml(manager.GetFile<YdrFile>(e), output);
+            if (e.Name.EndsWith(".ymap")) xml = MetaXml.GetXml(manager.GetFile<YmapFile>(e), out _);
+            if (e.Name.EndsWith(".ytyp")) xml = MetaXml.GetXml(manager.GetFile<YtypFile>(e), out _);
+            if (e.Name.EndsWith(".ytd")) xml = YtdXml.GetXml(manager.GetFile<YtdFile>(e), output);
             if (xml != null) { File.WriteAllText(dest + ".xml", xml); Console.WriteLine("Exported " + e.Name); }
         }
         catch (Exception ex) { errors.WriteLine(e.Path + ": " + ex); errors.Flush(); }
