@@ -58,3 +58,7 @@ matched logs, screenshots and performance observations. No generated game data,
 keys, ZIPs or maps should be uploaded to GitHub. Cloud tests use original synthetic
 native-protocol fixtures and a simulated reader; real archive decoding, key access,
 all DLC combinations and actual BeamNG behavior remain local validation blockers.
+
+Optional streaming-readiness work is deliberately excluded from the normal launch.
+See `docs/RUNTIME_EXPERIMENT.md` for the separate empty-scene profile, generated
+prefab plan, version-dependent Lua adapter and explicit engine-validation checklist.
