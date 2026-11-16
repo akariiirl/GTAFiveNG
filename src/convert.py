@@ -4,6 +4,7 @@ import argparse, collections, hashlib, json, math, shutil, zipfile, struct, re
 import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
+from dependencies import resolve
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = 'http://www.collada.org/2005/11/COLLADASchema'
@@ -214,7 +215,7 @@ def build(source,output,center,radius):
     level.mkdir(parents=True,exist_ok=True)
     report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'radius':radius,'in_game_verified':False}
     textures={p.stem.lower():{'path':p,'used':False} for p in sorted(source.glob('*.dds'))}
-    drawables={p.name.split('.rpf_')[-1][:-8]:p for pattern in ('*.yft.xml','*.ydr.xml') for p in sorted(source.glob(pattern))}
+    drawables, report['dependency_resolution'] = resolve(source)
     materials={}; objects=[]; converted={}; used=set(); local_bounds={}
     coverage_lo=np.array([np.inf,np.inf]); coverage_hi=-coverage_lo
     for p in sorted(source.glob('*.ymap.xml')):

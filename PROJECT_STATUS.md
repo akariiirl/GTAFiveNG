@@ -22,3 +22,42 @@ The precise extraction filters and sequence that produced neighborhood03 are not
 4. For a new computer or cloud environment follow BUILD.md, restore the pinned external dependency, and run source-only tests before attempting a conversion. Cloud conversion also requires separately provisioned authorized local game assets; repository checkout alone is insufficient.
 
 Update this file after each major development milestone, including commands, results and remaining uncertainty.
+
+## Cloud milestone — 2026-11-16 (base dbcd1e9)
+
+Fresh Linux checkout; no Windows files, game installations, existing generated
+builds, desktop or game-derived assets accessed. Prior checkpoint remains intact.
+
+- Phase A: pinned Python 3.12 dependency environment and source-only GitHub Actions
+  added. Clean .NET 8.0.428 restore/Release build with CodeWalker
+  `485d56bec00262ed7fa472261cce7bbc6202b96e` passed (0 warnings/errors).
+  Portable Python helper now uses project venv or PATH.
+- Phase B: 13 unittest tests pass, including original synthetic XML/triangle fixtures,
+  inclusive radius selection, missing asset/texture reports, reproducible packaging,
+  structural missing-shape detection, cache invalidation/tampering, and progress PNG
+  generation with immutable earlier milestones. This is useful coverage, not the
+  comprehensive requested fixture matrix; archive extraction is not exercised.
+- Phase C partial: YTYP aliases for standalone YDR/YFT, explicit duplicate diagnostics,
+  unresolved alias/dictionary reports. Automatic archive precedence, YDD member
+  resolution, texture inheritance and safe incremental extraction remain pending.
+- Phase D partial: source-export region CLI, deterministic IDs, content-addressed
+  conversion, persistent verified manifests, validation/package/map orchestration.
+  Bounding boxes and automatic extraction remain pending.
+- Phase E pending: geographic chunks, cross-chunk assets/dependencies, shared cache,
+  LOD generation and collision complexity analysis. Current cache rebuilds whole
+  regions conservatively when any input or pipeline source changes.
+- Phase F partial: existing maps run automatically per region, synthetic coverage
+  and preservation tested. Comparison PNGs, density/texture diagnostics and
+  build-to-build summaries remain pending. No GTA coverage or driving claims added.
+
+Credit consumption is not measurable/cappable through these tools. No credit
+purchase or agents were used; further large uncertain work was avoided. Actual
+remaining balance and compliance with the numeric allocation cannot be certified.
+
+Next PC session: preserve neighborhood03 and profiles; restore dependencies using
+BUILD.md; run the 13 tests; inspect prior missing collision sample and telemetry;
+run the region CLI against authorized local exports in a fresh workspace; inspect
+new dependency_resolution and missing resource lists; compare with the old package;
+then load using an isolated BeamNG profile and record package-hash-matched visual,
+collision, driving and performance evidence. Do not expand extraction broadly until
+archive precedence, YDD members and texture scoping have targeted local fixtures.

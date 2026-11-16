@@ -1,0 +1,29 @@
+name: Source-only tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-cloud.txt
+      - run: python -m pip install -r requirements-cloud.txt
+      - run: python -m unittest discover -s tests -v
+  reader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.428'
+      - run: |
+          git clone https://github.com/dexyfex/CodeWalker.git vendor/CodeWalker
+          git -C vendor/CodeWalker checkout 485d56bec00262ed7fa472261cce7bbc6202b96e
+          dotnet build src/AssetReader/AssetReader.csproj -c Release

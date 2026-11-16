@@ -44,3 +44,40 @@ BeamNG validation requires a local installation and Steam; inspect `tools/launch
 ## Git and cloud
 
 Review `git status`, `git diff` and `git diff --cached` before committing. `.gitignore` excludes the known large/proprietary paths and common secret types, but cannot detect every asset or secret. Review all staged files and history before creating a **private** GitHub repository; configure a remote only with user approval and never push without it. A cloud environment can develop and run source-only tests after dependencies are installed; conversion or BeamNG validation additionally requires supported runtime, licensed assets and separately configured access. Do not upload game assets, generated builds or credentials to the repository or cloud by default. Back up ignored checkpoints separately where authorized; a Git clone alone cannot restore them.
+
+## Verified Linux cloud setup — 2026-11-16
+
+Python 3.12.14 and .NET SDK 8.0.428 were used on a fresh Linux checkout.
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-cloud.txt
+MPLCONFIGDIR=/tmp/los-santos-mpl .venv/bin/python -m unittest discover -s tests -v
+git clone https://github.com/dexyfex/CodeWalker.git vendor/CodeWalker
+git -C vendor/CodeWalker checkout 485d56bec00262ed7fa472261cce7bbc6202b96e
+dotnet build src/AssetReader/AssetReader.csproj -c Release
+```
+
+Install SDK 8.0.428 first if absent (the official dotnet-install script supports a
+user-selected directory). Clean reader restore/build succeeded with zero warnings
+and errors. This proves compilation, not Linux archive extraction or key handling.
+The pinned Python requirements include transitive dependencies. Tests use stdlib
+unittest. CI runs Python tests and a separate reader compilation job; neither
+requires game files. The PowerShell Python helper prefers `.venv`, then PATH.
+
+With **local authorized exports**, the new incremental wrapper is:
+
+```bash
+.venv/bin/python src/region.py --source generated/source-new --workspace generated/regions-new --center -370 -1330 --radius 220
+```
+
+The source and workspace must be separate directories. Outputs are keyed by region
+selection, all exported source bytes, all pipeline Python modules and map settings.
+Each contains `build/`, `region.zip`, its package manifest, optional progress maps,
+and `region-manifest.json`. Cache reuse hashes every output and structurally
+validates the level. Tampered or incomplete outputs are preserved and rejected;
+use a new workspace to recover. Changed inputs produce a new directory. This is
+conservative whole-region rebuilding, not shared extraction or chunk caching.
+Do not upload real exports to cloud. Keep using existing local conversion commands
+when reproducing old builds. The wrapper does not invoke AssetReader, resolve all
+missing resources, choose archive precedence, or provide bounding box selection.

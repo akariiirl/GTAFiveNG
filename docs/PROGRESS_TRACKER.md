@@ -21,3 +21,11 @@ There is no authoritative full-island outline in the current exports. `world_pro
 Green is reserved for build-matched driving evidence. Existing vehicle logs lack a package hash and include control anomalies; the tracker does not automatically attribute them to this checkpoint. Verified drivable area and its percentage remain null. A vehicle path alone would establish travelled centreline, not the width or completeness of a road. The legend explicitly says no verified drive evidence is attributed.
 
 Known limitations: world outline unavailable; no automatic build-matched telemetry ingestion; no polygon clipping against a world boundary; sampled failures show points rather than inferred failed zones. These limitations are repeated in machine-readable summaries.
+
+Cloud milestone (2026-11-16): `src/region.py` now calls the tracker automatically for
+nonempty converted regions, storing maps alongside each immutable region build.
+Source-only tests generate PNGs from an original synthetic triangle and verify
+selected-instance counts, unknown island percentages and preservation of earlier
+milestones. These images are test evidence only, not converted GTA territory.
+No new actual Los Santos milestone image can be generated without local exports.
+Comparison PNGs, asset density and build-to-build summaries remain outstanding.
