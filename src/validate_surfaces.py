@@ -41,7 +41,7 @@ def validate(root,step=50):
     samples=[]
     objects=[json.loads(l) for l in (level/'main/MissionGroup/Geometry/items.level.json').read_text().splitlines()]
     for obj in objects:
-        name=Path(obj.get('shapeName','')).stem
+        name=obj.get('sourceArchetype',Path(obj.get('shapeName','')).stem)
         if not name.startswith('sc1_rd_r') or obj.get('collisionType')!='None': continue
         transform=np.array(obj['rotationMatrix']).reshape(3,3)
         for local in triangles(root/obj['shapeName'].lstrip('/')):

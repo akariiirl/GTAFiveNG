@@ -246,3 +246,20 @@ content plus reader assembly/resource identity invalidates snapshots. Checkpoint
 verify metadata XML before skipping decode. Interrupted runs resume in the same
 snapshot; prior snapshots are preserved. Invalid bounds/checkpoints fail rather
 than becoming coverage claims. Real installation decoding remains unverified.
+
+Experimental offline single-level composition:
+
+```powershell
+.venv/Scripts/python.exe src/compose.py generated/region-a/build generated/region-b/build --output generated/composed-new
+```
+
+The composer validates inputs, rebases scene placements/collision vertices to a common
+origin, content-deduplicates textures/materials/shapes, gives objects stable identities,
+deduplicates matching overlap placements and publishes one `composed.zip`. Geometry
+extents populate stable chunk membership, including boundary crossings. Optional
+`--origin X Y Z` selects the common origin. Existing composition/source outputs are
+never overwritten; changed/incomplete output requires a new destination. Core-output
+verification permits later diagnostics/maps. Converter-native identity collision
+object transforms are supported; arbitrary scene transforms are rejected. Prior
+8-significant-digit mesh exports can retain rounding differences across inputs;
+only identical canonical collision shapes deduplicate. No runtime streaming implied.
