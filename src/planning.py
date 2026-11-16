@@ -5,7 +5,7 @@ import json
 import math
 from pathlib import Path
 import xml.etree.ElementTree as ET
-from dependencies import resolve
+from dependencies import resolve, archetype_name_index, resolve_hash_reference
 from selection import selection as normalize_selection, contains
 
 
@@ -20,7 +20,8 @@ def plan(source, *, bbox=None, center=None, radius=None, chunk_size=256):
     chunk_id(0, 0, chunk_size)
     selection = normalize_selection(center,radius,bbox)
     resources, diagnostics = resolve(source)
-    chunks = {}; graph = {}; placements = set()
+    hash_names = archetype_name_index(source)
+    hash_diagnostics = []; chunks = {}; graph = {}; placements = set()
     for path in sorted(source.glob('*.ymap.xml')):
         if any(n in path.name for n in ('oldbill', 'newbill')): continue
         for item in ET.parse(path).getroot().findall('entities/Item'):
@@ -28,8 +29,12 @@ def plan(source, *, bbox=None, center=None, radius=None, chunk_size=256):
             position = item.find('position')
             xyz = tuple(float(position.get(k, 0)) for k in 'xyz')
             if not all(math.isfinite(v) for v in xyz): raise ValueError('Nonfinite placement')
-            name = item.findtext('archetypeName', '').lower()
-            if not contains(selection,xyz[:2]) or (name, xyz) in placements: continue
+            raw_name = item.findtext('archetypeName', '')
+            name, hash_diagnostic = resolve_hash_reference(raw_name, hash_names)
+            if not contains(selection,xyz[:2]): continue
+            if hash_diagnostic:
+                hash_diagnostics.append({**hash_diagnostic, 'ymap': path.name})
+            if (name, xyz) in placements: continue
             placements.add((name, xyz))
             key = chunk_id(*xyz[:2], chunk_size)
             chunks.setdefault(key, set()).add(name)
@@ -40,7 +45,8 @@ def plan(source, *, bbox=None, center=None, radius=None, chunk_size=256):
     result = {'schema': 1, 'selection': selection, 'chunk_size': chunk_size,
               'chunks': {k: sorted(v) for k,v in sorted(chunks.items())},
               'dependencies': dict(sorted(graph.items())), 'inputs': inputs,
-              'diagnostics': diagnostics, 'in_game_verified': False}
+              'diagnostics': diagnostics, 'hash_reference_diagnostics': sorted(hash_diagnostics, key=lambda d: (d['ymap'], d['reference'])),
+              'in_game_verified': False}
     result['plan_id'] = hashlib.sha256(json.dumps(result, sort_keys=True).encode()).hexdigest()
     return result
 
