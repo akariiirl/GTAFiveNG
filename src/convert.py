@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
 from selection import selection, contains, frame
+from resource_cache import cached_drawable
 from dependencies import resolve, TextureCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -217,7 +218,7 @@ def jsonl(path,rows):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(''.join(json.dumps(r,separators=(',',':'))+'\n' for r in rows))
 
-def build(source,output,center=None,radius=None,bbox=None):
+def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
     config=selection(center,radius,bbox)
     center,radius,region_size=frame(config)
     origin=np.array([center[0],center[1],0.]); level=output/'levels/los_santos_fazes'
@@ -236,7 +237,8 @@ def build(source,output,center=None,radius=None,bbox=None):
             used.add(key)
             if name not in drawables: report['missing_assets'].add(name); continue
             if name not in converted:
-                meshes=drawable(drawables[name],name,materials,texture_catalog.for_asset(name),report)
+                bindings=texture_catalog.for_asset(name)
+                meshes=cached_drawable(shared_cache,drawables[name],name,materials,bindings,report,drawable) if shared_cache is not None else drawable(drawables[name],name,materials,bindings,report)
                 if not meshes: report['missing_assets'].add(name); continue
                 dae(level/'art/shapes'/f'{name}.dae',meshes)
                 converted[name]=sum(len(m['i']) for m in meshes)

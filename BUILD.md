@@ -135,3 +135,18 @@ remains selected against converted visual extents. The level origin is the box
 midpoint; its size records box dimensions. The legacy report `radius` is the box's
 circumscribed radius for compatibility; `selection.bbox` is authoritative.
 Old radius commands and reports remain supported. No archive extraction is added.
+
+Opt-in persistent drawable conversion reuse across neighboring regions:
+
+```bash
+.venv/bin/python src/region.py --source generated/source-new --workspace generated/regions-shared --center -370 -1330 --radius 220 --shared-cache
+```
+
+The workspace `_shared_drawables/` stores immutable JSON geometry/effect entries,
+keyed by source XML/member, archetype, texture bindings, pipeline hashes and NumPy
+version. Cache hits replay materials, texture usage and conversion diagnostics.
+Changed inputs create new entries; corrupt/conflicting entries fail without being
+overwritten. Use a fresh workspace to recover while preserving evidence. Cache
+stats appear in region manifests. Real cached geometry is proprietary and must
+remain local/ignored. This reduces drawable parsing/conversion, not collision or
+texture conversion, and is not a bounded-memory mesh pipeline. Entries load fully.

@@ -151,3 +151,18 @@ pass locally, including inclusive edges, invalid/mixed selections, planner/map
 counts, box origin/size and cache reuse. Legacy radius calls/reports remain supported.
 Selection includes whole placed assets; no triangle clipping or gameplay validation.
 This supersedes the earlier limitation that bbox was planning-only.
+
+### Budget correction and shared-cache milestone
+
+Latest user balance: 426 credits for the entire project. Original limits apply:
+maximum 180 cloud credits total, preserve 276 for local development. At that report,
+at most 150 additional credits could be spent while preserving 276. This supersedes
+the 60-credit-only reserve calculation above; no live credit meter is available.
+
+Added opt-in persistent drawable conversion caching between regions. Thirty-one tests
+pass locally: neighboring cache reuse, byte-identical cached/uncached ZIP/report,
+source invalidation, immutable entry conflicts and corruption rejection. Entries
+include replayed material/texture/report effects; source exports remain read-only.
+Cache is local/ignored with generated workspace, fully loads individual JSON mesh
+entries, and does not cache collisions or establish runtime streaming. PR #9 bbox
+CI passed Windows/Linux tests and Linux reader compilation. No game assets used.
