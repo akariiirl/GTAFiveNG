@@ -89,3 +89,14 @@ Issue #2 dependency policy: optional `dependency-policy.json` beside exports acc
 conflicts. `dependencies.texture_lookup` is a scoped lookup API with parent-cycle
 and source-escape checks; conversion still uses its legacy flat DDS lookup. Do not
 assume this policy is automatically generated from installed DLC metadata.
+
+Read-only extraction planning from exported XML (exclusive output creation):
+
+```bash
+.venv/bin/python src/planning.py --source generated/source-new --bbox -500 -1500 -200 -1200 --chunk-size 256 --output generated/plan-new.json
+```
+
+Alternatively use `--center X Y --radius R`. The planner returns selected placement
+asset names, chunk memberships, resolved export filenames and unresolved names.
+`planning.reconcile(plan, source, previous)` verifies task bytes; pending tasks may
+be retried by a future archive extraction adapter. It never writes source files.
