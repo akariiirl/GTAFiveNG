@@ -97,7 +97,7 @@ def quat_matrix(e):
     # CEntityDef stores inverse rotation; CodeWalker YmapEntityDef inverts it.
     q=e.find('rotation'); x,y,z=-vec(q); w=float(q.get('w'))
     norm=math.sqrt(x*x+y*y+z*z+w*w)
-    if norm<1e-8: raise ValueError('Zero quaternion')
+    if not math.isfinite(norm) or norm<1e-8: raise ValueError('Invalid quaternion')
     x,y,z,w=np.array([x,y,z,w])/norm
     return np.array([[1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w)],
                      [2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w)],
@@ -201,7 +201,7 @@ def bounds_mesh(xml,origin,report):
         if extra: v=np.concatenate([v,np.array(extra)])
         v=(np.column_stack([v,np.ones(len(v))])@matrix)[:,:3]-origin
         if np.linalg.det(matrix[:3,:3])<0: ix=np.asarray(ix)[:,::-1]
-        if ix:
+        if len(ix):
             idx,deg=valid_mesh(v,ix); report['degenerate_triangles_removed']+=deg
             meshes.append({'v':v,'i':idx,'material':'lsf_collision','node':'Colmesh-1'})
     visit(root,np.eye(4))

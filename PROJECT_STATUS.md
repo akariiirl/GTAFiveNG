@@ -99,3 +99,12 @@ LOD threshold selection. 21 synthetic tests pass. Payload budget tests cover mis
 corrupt and oversized resources; the budget excludes Python/loader overhead and
 cannot bound allocations performed inside a supplied loader. This is an offline
 model, not BeamNG runtime integration, geometry simplification or proven streaming.
+
+### Issue #2 D — collision/transform reliability
+
+Planning PR #4 and corrected residency PR #5 passed both GitHub Actions runs.
+24 synthetic tests pass after mirrored collision winding/NumPy truth-value fix,
+finite quaternion and primitive argument validation, and no-collision diagnostics.
+Surface tests show missing hits without collision and aligned hits with an original
+synthetic road/collision triangle. These are sampled geometry checks, not verified
+drivable territory. Actual neighborhood03 collision miss remains unassessed locally.

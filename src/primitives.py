@@ -5,6 +5,9 @@ import numpy as np
 def rounded_shape(p1,p2,radius,kind,sides=8,hemisphere_steps=3):
     p1=np.asarray(p1,dtype=float); p2=np.asarray(p2,dtype=float)
     if radius<=0 or not math.isfinite(radius): raise ValueError('Invalid primitive radius')
+    if kind not in ('Sphere','Capsule','Cylinder'): raise ValueError('Unknown primitive kind')
+    if p1.shape != (3,) or p2.shape != (3,) or not np.isfinite([p1,p2]).all(): raise ValueError('Invalid primitive endpoints')
+    if not isinstance(sides, int) or sides<3 or not isinstance(hemisphere_steps, int) or hemisphere_steps<1: raise ValueError('Invalid tessellation')
     delta=p2-p1; length=np.linalg.norm(delta)
     axis=delta/length if length>1e-9 else np.array([0.,0.,1.])
     helper=np.array([1.,0.,0.]) if abs(axis[0])<0.9 else np.array([0.,1.,0.])
