@@ -42,7 +42,7 @@ class DependencyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); (root/'paint.synthetic').write_bytes(b'original test data')
             policy = {'txd_parents': {'child': 'parent'}, 'textures': {'parent': {'paint': 'paint.synthetic'}}}
-            self.assertEqual(texture_lookup(root, 'child', 'paint', policy)[0], root/'paint.synthetic')
+            self.assertEqual(texture_lookup(root, 'child', 'paint', policy)[0], (root/'paint.synthetic').resolve())
             self.assertIsNone(texture_lookup(root, 'other', 'paint', policy)[0])
             policy['txd_parents']['parent'] = 'child'
             self.assertIn('cycle', texture_lookup(root, 'child', 'missing', policy)[1])
