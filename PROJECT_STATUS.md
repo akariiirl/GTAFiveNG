@@ -71,3 +71,13 @@ or PR was created. Repository contents/actions write permission is needed before
 Publication update: Git push subsequently succeeded on 2026-11-16. The development
 branch `dev/cloud-foundation-regions` is now saved on origin; the earlier HTTP 403
 publication blocker is resolved for Git push.
+
+## Issue #2 — dependency milestone (2026-11-16)
+
+Started from merged master 3ee47ba. Added YDD member conversion, fixed-point YTYP
+alias chains, explicit exported-filename priority/override policy and candidate
+provenance. Added scoped parent-TXD lookup API; it is not yet wired into material
+conversion, which retains legacy flat DDS behavior. Synthetic tests exercise
+conflicts, priorities, chains/cycles, YDD conversion and texture scope/escape checks.
+Real archive mount order, hash-only member names and actual texture fidelity remain
+PC validation/integration work. No licensed assets accessed. Credit meter unavailable.

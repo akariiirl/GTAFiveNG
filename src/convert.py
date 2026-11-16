@@ -104,7 +104,13 @@ def quat_matrix(e):
                      [2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)]])
 
 def drawable(xml, name, materials, textures, report):
-    document=ET.parse(xml).getroot()
+    if isinstance(xml, tuple):
+        path, member = xml
+        matches = [e for e in ET.parse(path).getroot().findall('Item') if e.findtext('Name', '').lower() == member]
+        if len(matches) != 1: raise ValueError('Ambiguous or missing YDD member: ' + member)
+        document = matches[0]
+    else:
+        document=ET.parse(xml).getroot()
     root=document.find('Drawable') if document.tag=='Fragment' else document
     if root is None: return []
     shaders=root.findall('ShaderGroup/Shaders/Item')
