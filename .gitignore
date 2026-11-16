@@ -1,4 +1,5 @@
 vendor/
+tools/python-packages/
 generated/
 builds/
 logs/

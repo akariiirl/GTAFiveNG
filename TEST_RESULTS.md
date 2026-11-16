@@ -1,5 +1,7 @@
 # Test results
 
+2026-11-16 visual tracker: generated and visually inspected 3080 × 2640 PNGs from existing neighborhood03 data. Raster footprint: approximately 376,300 m² at 2 m resolution. Selected-source instance match: 5,946 / 7,465 (79.65%); this is not geographic or whole-island completeness. Surface report: 1,510 / 1,511 samples within tolerance, one documented failure shown in red. Whole-island boundary and build-matched driving coverage are unavailable. Tracker unit check verifies overlap is counted once and vertical walls add no projected area. No additional neighborhood extraction was performed for the tracker.
+
 2026-11-15:
 
 - CodeWalker.Core compiled: zero errors.

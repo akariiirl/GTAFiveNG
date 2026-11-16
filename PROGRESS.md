@@ -1,5 +1,7 @@
 # Project Los Santos
 
+2026-11-16 addition: automated progress tracker in `src/progress_maps.py`; validation entry point `tools/validate_milestone.ps1`. It maps existing visual/collision geometry and documented missing placements, preserving timestamped PNGs and JSON. Whole-island and verified drivable percentages remain unavailable rather than inferred. See `docs/PROGRESS_TRACKER.md` for measurement definitions and missing full-world boundary data.
+
 2026-11-15: Development started. No converted or playable GTA region yet.
 
 - Verified GTA V Legacy in D:/SteamLibrary/steamapps/common/Grand Theft Auto V.

@@ -1,5 +1,7 @@
 # Project Los Santos — local prototype
 
+Visual milestone maps: see [tracker instructions](docs/PROGRESS_TRACKER.md). Latest PNGs and measured statistics are in `generated/progress_maps/`; earlier timestamped milestone images are preserved.
+
 This is a partial South Los Santos conversion, **not the complete GTA V map**.
 The current preserved ZIP is `builds/checkpoint01/los_santos_fazes.zip`.
 It contains original local GTA geometry and textures; keep it private.
