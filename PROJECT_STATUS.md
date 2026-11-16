@@ -1,5 +1,12 @@
 # Project status — 2026-11-16
 
+## Local region conflict audit — 2026-11-16
+
+- A completed 297,372-resource native catalog was reused without re-running bootstrap. A region-aware scan of the two adjacent 200 m boxes found 47 conflicting metadata names potentially relevant to the selection and 2,604 unrelated conflicting names. The local report preserves the candidates; no active mount order was inferred.
+- CodeWalker reads DLC activation and setup order, applies patch mappings and content changes, and builds active RPF mounts. This is stronger evidence than filename order but the converter does not yet reproduce or export the complete active mount mapping. The 47 required conflicts therefore block extraction; no new package or BeamNG validation is claimed.
+- Region selection now checks every YMAP candidate before discarding unrelated conflicts, includes YTYP candidates for selected archetypes including hash references, and verifies catalog XML hashes. A real exported YTYP contained invalid control-character references; these are removed only after hash verification. Explicit catalog reuse checks archive/reader modification times, not archive content hashes; files replaced while preserving timestamps require a fresh bootstrap. See `docs/LOCAL_EXECUTION.md`.
+- Focused local controller tests passed; full CI and integration status must be checked separately. Next: derive and validate active mounts from the installed game's CodeWalker DLC setup and patch evidence, resolve the remaining required candidates, then resume exact extraction and inspect its diagnostics. Preserve all local outputs and game files.
+
 ## Predictive streaming cloud prototype (Issue #21, synthetic only)
 
 - Added an opt-in offline scheduler using vehicle position, heading, speed and

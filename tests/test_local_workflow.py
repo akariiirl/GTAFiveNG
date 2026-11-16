@@ -16,6 +16,69 @@ from test_region import fixture
 
 
 class LocalWorkflowTests(unittest.TestCase):
+    def test_region_scope_checks_every_conflicting_candidate_and_required_types(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); snapshot=root/'snapshot'; snapshot.mkdir(); records=[]
+            def add(path, body):
+                data=body.encode(); filename=export_name(path); (snapshot/filename).write_bytes(data)
+                records.append({'path':path,'name':path.rsplit('/',1)[-1],'xml':filename,'xml_sha256':hashlib.sha256(data).hexdigest()})
+            def ymap(x, name):
+                return f'<CMapData><entities><Item><lodLevel>LODTYPES_DEPTH_HD</lodLevel><position x="{x}" y="0"/><archetypeName>{name}</archetypeName></Item></entities></CMapData>'
+            add('a.rpf/local.ymap',ymap(100,'toy')); add('b.rpf/local.ymap',ymap(0,'toy'))
+            add('a.rpf/remote.ymap',ymap(100,'x')); add('b.rpf/remote.ymap',ymap(101,'x'))
+            add('a.rpf/types.ytyp','<CMapTypes><archetypes><Item><name>toy</name></Item></archetypes></CMapTypes>')
+            (snapshot/'inventory.jsonl').write_text('\n'.join(json.dumps(r) for r in records))
+            region=[{'bbox':[-1,-1,1,1]}]; dest=root/'view'
+            with self.assertRaisesRegex(ValueError,'Ambiguous relevant'): active_metadata(snapshot,{},dest,region)
+            report=json.loads((dest/'metadata-conflicts.json').read_text())
+            self.assertEqual([x['name'] for x in report['relevant']],['local.ymap'])
+            self.assertEqual(report['unrelated'],['remote.ymap'])
+            active_metadata(snapshot,{'archive_priorities':{'b.rpf':10}},root/'resolved',region)
+            self.assertEqual(len(list((root/'resolved').glob('*.ymap.xml'))),1)
+            self.assertEqual(len(list((root/'resolved').glob('*.ytyp.xml'))),1)
+
+    def test_region_scope_rejects_conflicting_required_type_and_modified_xml(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); snap=root/'snapshot'; snap.mkdir(); records=[]
+            for path,body in [('a.rpf/map.ymap','<CMapData><entities><Item><lodLevel>LODTYPES_DEPTH_HD</lodLevel><position x="0" y="0"/><archetypeName>toy</archetypeName></Item></entities></CMapData>'),('a.rpf/types.ytyp','<CMapTypes><archetypes><Item><name>toy</name></Item></archetypes></CMapTypes>'),('b.rpf/types.ytyp','<CMapTypes><archetypes><Item><name>other</name></Item></archetypes></CMapTypes>')]:
+                filename=export_name(path); data=body.encode(); (snap/filename).write_bytes(data)
+                records.append({'path':path,'name':path.rsplit('/',1)[-1],'xml':filename,'xml_sha256':hashlib.sha256(data).hexdigest()})
+            (snap/'inventory.jsonl').write_text('\n'.join(json.dumps(r) for r in records))
+            region=[{'bbox':[-1,-1,1,1]}]
+            with self.assertRaisesRegex(ValueError,'Ambiguous relevant'): active_metadata(snap,{},root/'view',region)
+            self.assertEqual(json.loads((root/'view/metadata-conflicts.json').read_text())['relevant'][0]['name'],'types.ytyp')
+            (snap/records[0]['xml']).write_text('modified')
+            with self.assertRaisesRegex(ValueError,'hash mismatch'): active_metadata(snap,{},root/'other',region)
+
+    def test_metadata_removes_only_disallowed_control_references(self):
+        from local_workflow import safe_metadata
+        self.assertEqual(safe_metadata(b'<x>a&#1;b&#x1F;c&#10;d&#x20;</x>'),b'<x>abc&#10;d&#x20;</x>')
+
+    def test_hash_only_placement_retains_candidate_archetype(self):
+        from dependencies import joaat
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); snap=root/'snapshot'; snap.mkdir(); records=[]
+            ref='hash_%08x' % joaat('toy')
+            for path,body in [('a.rpf/map.ymap',f'<CMapData><entities><Item><lodLevel>LODTYPES_DEPTH_HD</lodLevel><position x="0" y="0"/><archetypeName>{ref}</archetypeName></Item></entities></CMapData>'),('a.rpf/types.ytyp','<CMapTypes><archetypes><Item><name>toy</name></Item></archetypes></CMapTypes>')]:
+                data=body.encode(); filename=export_name(path); (snap/filename).write_bytes(data)
+                records.append({'path':path,'name':path.rsplit('/',1)[-1],'xml':filename,'xml_sha256':hashlib.sha256(data).hexdigest()})
+            (snap/'inventory.jsonl').write_text('\n'.join(json.dumps(r) for r in records))
+            active_metadata(snap,{},root/'view',[{'bbox':[-1,-1,1,1]}])
+            self.assertEqual(len(list((root/'view').glob('*.ytyp.xml'))),1)
+
+    def test_reuse_catalog_rejects_newer_archive_without_running_bootstrap(self):
+        import os
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d); game=root/'game'; game.mkdir(); (game/'GTA5.exe').write_text('fixture')
+            archive=game/'base.rpf'; archive.write_text('fixture'); reader=root/'reader.dll'; reader.write_text('fixture')
+            work=root/'work'; catalog=work/'catalog'; snap=catalog/'snapshot'; snap.mkdir(parents=True)
+            (snap/'inventory.jsonl').write_text('')
+            bootstrap=catalog/'bootstrap.json'; bootstrap.write_text(json.dumps({'snapshot':str(snap),'errors':0}))
+            newer=bootstrap.stat().st_mtime_ns+10_000_000_000; os.utime(archive,ns=(newer,newer))
+            def no_run(*args,**kwargs): raise AssertionError('bootstrap must not run')
+            with self.assertRaisesRegex(ValueError,'changed since bootstrap'):
+                run_workflow([{'bbox':[0,0,1,1]}],work,game,reader,native_runner=no_run,reuse_catalog=True)
+
     def test_full_synthetic_inventory_to_isolated_package_and_resume(self):
         with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()):
             root=Path(d); source=root/'fixtures'; fixture(source)

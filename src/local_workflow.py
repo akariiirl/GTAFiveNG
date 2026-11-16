@@ -9,9 +9,18 @@ import shutil
 import subprocess
 import sys
 import uuid
-from selection import selection
+import re
+import xml.etree.ElementTree as ET
+from selection import selection, contains
 
 ROOT=Path(__file__).resolve().parents[1]
+
+def safe_metadata(data):
+    def replace(match):
+        value=match.group(1).lower()
+        code=int(value[1:],16) if value.startswith(b'x') else int(value)
+        return b'' if code<32 and code not in (9,10,13) else match.group(0)
+    return re.sub(rb'&#(x[0-9a-fA-F]+|[0-9]+);',replace,data)
 
 
 def plan_execution(regions, workspace, gta_root=None):
@@ -22,31 +31,72 @@ def plan_execution(regions, workspace, gta_root=None):
             'game_files_accessed':False,'in_game_verified':False}
 
 
-def active_metadata(snapshot, policy, destination):
+def active_metadata(snapshot, policy, destination, regions=None):
     records=[json.loads(line) for line in (snapshot/'inventory.jsonl').read_text().splitlines() if line.strip()]
     groups={}
     for record in records:
         if record.get('xml'): groups.setdefault(record['name'],[]).append(record)
-    selected=[]
+    relevant=set(groups)
+    if regions is not None:
+        from dependencies import joaat
+        relevant=set(); required=set()
+        def xml(record):
+            data=(snapshot/record['xml']).read_bytes()
+            if hashlib.sha256(data).hexdigest()!=record['xml_sha256']: raise ValueError('Catalog metadata hash mismatch: '+record['path'])
+            try: return ET.fromstring(safe_metadata(data))
+            except ET.ParseError as ex: raise ValueError('Invalid metadata XML: '+record['path']+': '+str(ex)) from ex
+        for name,candidates in groups.items():
+            if not name.endswith('.ymap'): continue
+            for record in candidates:
+                for item in xml(record).findall('entities/Item'):
+                    if item.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
+                    pos=item.find('position')
+                    if pos is None: raise ValueError('YMAP entity has no position: '+record['path'])
+                    xy=[float(pos.get(k)) for k in ('x','y')]
+                    if any(contains(region,xy) for region in regions):
+                        relevant.add(name); required.add(item.findtext('archetypeName','').strip().lower())
+        required_hashes={int(m.group(1),16) for n in required if (m:=re.fullmatch(r'hash_([0-9a-f]{8})',n))}
+        for name,candidates in groups.items():
+            if not name.endswith('.ytyp'): continue
+            for record in candidates:
+                for item in xml(record).findall('.//archetypes/Item'):
+                    archetype=item.findtext('name','').strip().lower()
+                    try: hashed=joaat(archetype) if archetype else None
+                    except UnicodeEncodeError: hashed=None
+                    if archetype in required or hashed in required_hashes:
+                        relevant.add(name); break
+    selected=[]; unrelated=[]; ambiguous=[]
     for name,candidates in sorted(groups.items()):
         def rank(record):
             return max((value for prefix,value in policy.get('archive_priorities',{}).items() if record['path'].startswith(prefix.lower().replace('\\','/').rstrip('/')+'/')),default=0)
         best=max(map(rank,candidates)); winners=[r for r in candidates if rank(r)==best]
-        if len(winners)>1 and len({r['xml_sha256'] for r in winners})>1: raise ValueError('Ambiguous metadata requires archive policy: '+name)
+        if name not in relevant:
+            if len(winners)>1 and len({r['xml_sha256'] for r in winners})>1: unrelated.append(name)
+            continue
+        if len(winners)>1 and len({r['xml_sha256'] for r in winners})>1:
+            ambiguous.append({'name':name,'candidates':[r['path'] for r in winners]}); continue
         selected.append(sorted(winners,key=lambda r:r['path'])[0])
     destination.mkdir(parents=True,exist_ok=True)
+    report=destination/'metadata-conflicts.json'; contents=json.dumps({'relevant':ambiguous,'unrelated':unrelated},indent=2)
+    if report.exists():
+        if report.read_text()!=contents: raise ValueError('Changed metadata conflict report preserved')
+    else: report.write_text(contents)
+    if ambiguous: raise ValueError('Ambiguous relevant metadata requires archive policy: '+str(len(ambiguous)))
     for record in selected:
         source=snapshot/record['xml']; target=destination/record['xml']
+        raw=source.read_bytes()
+        if hashlib.sha256(raw).hexdigest()!=record['xml_sha256']: raise ValueError('Catalog metadata hash mismatch: '+record['path'])
+        data=safe_metadata(raw)
         if target.exists():
-            if target.read_bytes()!=source.read_bytes(): raise ValueError('Changed metadata view preserved')
-        else: shutil.copyfile(source,target)
+            if target.read_bytes()!=data: raise ValueError('Changed metadata view preserved')
+        else: target.write_bytes(data)
     path=destination/'dependency-policy.json'
     if path.exists() and json.loads(path.read_text())!=policy: raise ValueError('Changed metadata policy preserved')
     if not path.exists(): path.write_text(json.dumps(policy,sort_keys=True,indent=2))
     return records
 
 
-def run_workflow(regions, workspace, gta_root, reader=None, policy=None, allow_missing=False, native_runner=None):
+def run_workflow(regions, workspace, gta_root, reader=None, policy=None, allow_missing=False, native_runner=None, reuse_catalog=False):
     from batch import run_batch
     from compose import compose
     from extraction import build_tasks, execute
@@ -75,11 +125,24 @@ def run_workflow(regions, workspace, gta_root, reader=None, policy=None, allow_m
             command(['dotnet','build',str(ROOT/'src/AssetReader/AssetReader.csproj'),'-c','Release'])
         if not reader.exists(): raise RuntimeError('AssetReader DLL missing after build')
         checkpoint('native bootstrap')
-        catalog=workspace/'catalog'; command(['dotnet',str(reader),str(gta_root),str(catalog),'--bootstrap'])
+        catalog=workspace/'catalog'
+        if not reuse_catalog: command(['dotnet',str(reader),str(gta_root),str(catalog),'--bootstrap'])
         bootstrap=json.loads((catalog/'bootstrap.json').read_text())
         if bootstrap['errors']: raise RuntimeError('Native inventory has errors; inspect snapshot index-errors.jsonl')
         snapshot=Path(bootstrap['snapshot']).resolve()
         if not snapshot.is_dir(): raise ValueError('Bootstrap snapshot missing')
+        if reuse_catalog:
+            stamp=(catalog/'bootstrap.json').stat().st_mtime_ns
+            inventory_path=snapshot/'inventory.jsonl'
+            if not inventory_path.is_file(): raise ValueError('Completed inventory missing')
+            archives=list(gta_root.rglob('*.rpf'))
+            present={p.relative_to(gta_root).as_posix().lower() for p in archives}
+            with inventory_path.open(encoding='utf-8') as stream:
+                indexed={json.loads(line).get('archive') for line in stream if line.strip()}
+            indexed.discard(None)
+            if (reader.stat().st_mtime_ns>stamp or inventory_path.stat().st_mtime_ns>stamp
+                or any(p.stat().st_mtime_ns>stamp for p in archives) or not indexed.issubset(present)):
+                raise ValueError('Reader or archive changed since bootstrap; run native bootstrap again')
         policy=policy or {}
         signature={'snapshot':str(snapshot),'regions':selections,'policy':policy,'allow_missing':allow_missing,
                    'pipeline':{p.name:hash_file(p) for p in Path(__file__).parent.glob('*.py')}}
@@ -92,7 +155,7 @@ def run_workflow(regions, workspace, gta_root, reader=None, policy=None, allow_m
                 if run_root not in path.parents or hash_file(path)!=digest: raise ValueError('Completed workflow artifact changed; preserved')
             checkpoint('complete'); return run_root/'handoff/handoff.json'
         checkpoint('active metadata view')
-        source=run_root/'metadata'; inventory=active_metadata(snapshot,policy,source)
+        source=run_root/'metadata'; inventory=active_metadata(snapshot,policy,source,selections)
         checkpoint('exact extraction')
         plans=[build_tasks(source,inventory,**config) for config in selections]; tasks={}; diagnostics=[]; texture_policy={'scoped_textures':True,'asset_txds':{},'txd_parents':policy.get('txd_parents',{})}
         for plan in plans:
@@ -160,9 +223,9 @@ def run_workflow(regions, workspace, gta_root, reader=None, policy=None, allow_m
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__); p.add_argument('--regions',required=True,type=Path); p.add_argument('--workspace',required=True,type=Path)
     p.add_argument('--gta-root',default=os.environ.get('GTA_ROOT')); p.add_argument('--reader',type=Path); p.add_argument('--policy',type=Path)
-    p.add_argument('--dry-run',action='store_true'); p.add_argument('--allow-missing',action='store_true'); a=p.parse_args()
+    p.add_argument('--dry-run',action='store_true'); p.add_argument('--allow-missing',action='store_true'); p.add_argument('--reuse-catalog',action='store_true'); a=p.parse_args()
     regions=json.loads(a.regions.read_text())
     if a.dry_run: print(json.dumps(plan_execution(regions,a.workspace,a.gta_root),indent=2))
     else:
         if not a.gta_root: p.error('Supply --gta-root or GTA_ROOT environment variable')
-        print(run_workflow(regions,a.workspace,a.gta_root,a.reader,json.loads(a.policy.read_text()) if a.policy else None,a.allow_missing))
+        print(run_workflow(regions,a.workspace,a.gta_root,a.reader,json.loads(a.policy.read_text()) if a.policy else None,a.allow_missing,reuse_catalog=a.reuse_catalog))

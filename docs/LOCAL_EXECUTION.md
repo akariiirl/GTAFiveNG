@@ -44,6 +44,17 @@ completed packages and handoffs verify hashes and reuse without rebuilding. Sour
 changes create new snapshot/run IDs. Inspect workflow-state.json and error-*.json
 for the failed stage, plus native errors.log/dependency-diagnostics.json.
 
+To reuse a completed native catalog without rescanning game archives, pass
+`-ReuseCatalog`. This checks archive and reader modification times against the
+bootstrap completion time, checks indexed physical archives are still present,
+and validates each candidate metadata XML hash as it is read. Modification times
+are not cryptographic proof that archive bytes are unchanged: rerun bootstrap if
+archives may have been replaced with preserved times.
+Region conflict checking inspects all YMAP candidates and relevant YTYP candidates;
+unrelated metadata conflicts are reported in `metadata-conflicts.json`, while
+unresolved relevant conflicts stop the workflow. Active mount precedence is not
+inferred from filenames.
+
 The final printed path is `.../handoff/handoff.json`. Review missing resources,
 collision sample failures, package SHA-256 and progress maps first. Then:
 
