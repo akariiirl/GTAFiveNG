@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings>
+    <CodeWalkerProject Condition="'$(CodeWalkerProject)' == ''">../../vendor/CodeWalker/CodeWalker.Core/CodeWalker.Core.csproj</CodeWalkerProject>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="$(CodeWalkerProject)" /></ItemGroup>
+</Project>

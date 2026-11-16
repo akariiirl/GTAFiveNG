@@ -130,7 +130,8 @@ def drawable(xml, name, materials, textures, report):
         if skinned:
             report.setdefault('skipped_skinned_models',set()).add(name)
             continue
-        layout=list(g.find('VertexBuffer/Layout')); data=g.findtext('VertexBuffer/Data','').strip().splitlines()
+        layout=list(g.find('VertexBuffer/Layout')); data=[row for row in g.findtext('VertexBuffer/Data','').splitlines() if row.strip()]
+        if not data: raise ValueError('Empty vertex buffer: '+name)
         widths={'Position':3,'Normal':3,'Colour0':4,'Colour1':4,'Tangent':4,'BlendWeights':4,'BlendIndices':4}
         # CodeWalker separates semantic fields by three spaces. Some Legacy
         # layouts store a four-component packed normal rather than XYZ alone.
@@ -180,7 +181,7 @@ def bounds_mesh(xml,origin,report):
         raw=b.findtext('Vertices')
         if not raw:
             report['unsupported_collision'][b.get('type','unknown')]+=1; return
-        v=np.array([[float(n) for n in row.strip().split(',')] for row in raw.strip().splitlines()])
+        v=np.array([[float(n) for n in row.strip().split(',')] for row in raw.splitlines() if row.strip()])
         v+=vec(b.find('GeometryCenter'))
         ix=[]
         extra=[]
