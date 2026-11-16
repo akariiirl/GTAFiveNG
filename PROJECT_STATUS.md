@@ -285,3 +285,18 @@ same-named texture payloads, reversed-input ZIP equality and verified resume aft
 adding diagnostics. Forty-three Python tests pass locally. Collision transforms
 outside converter-native identity are rejected; exact canonical meshes deduplicate,
 so old rounded exports can retain distinct collision shapes. Runtime remains unverified.
+
+### One-command local entrypoint milestone
+
+Composer PR #17 merged as e9df24d after all checks passed. Added Windows PowerShell
+entrypoint and local controller for bootstrap -> explicit metadata precedence ->
+exact extraction -> mixed region conversion -> composition -> collision/maps ->
+hash-verified isolated testing handoff. Dry-run does not inspect game files or
+create workspace directories. Interrupted extraction preserves partial data and
+recovers verified receipts into a fresh attempt; region/composition partial outputs
+are retained, completed handoffs verify/reuse. Strict default stops on dependency
+uncertainty; AllowMissing is explicit and never a completeness claim. Original
+synthetic integration simulates the reader and tests interruption/recovery through
+an isolated package. Windows CI checks the PowerShell dry-run; Linux skips that test
+when pwsh is absent. Actual native game decoding and BeamNG launch remain unverified.
+PC-return commands and exact blockers are recorded in docs/LOCAL_EXECUTION.md.
