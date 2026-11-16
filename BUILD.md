@@ -81,3 +81,11 @@ conservative whole-region rebuilding, not shared extraction or chunk caching.
 Do not upload real exports to cloud. Keep using existing local conversion commands
 when reproducing old builds. The wrapper does not invoke AssetReader, resolve all
 missing resources, choose archive precedence, or provide bounding box selection.
+
+Issue #2 dependency policy: optional `dependency-policy.json` beside exports accepts
+`priorities: {"export.ydr.xml": 10}` (larger wins), `overrides: {"asset":
+"pack.ydd.xml#member"}`, `txd_parents: {"child": "parent"}`, and
+`textures: {"parent": {"texture": "relative-file.dds"}}`. Equal priorities remain
+conflicts. `dependencies.texture_lookup` is a scoped lookup API with parent-cycle
+and source-escape checks; conversion still uses its legacy flat DDS lookup. Do not
+assume this policy is automatically generated from installed DLC metadata.
