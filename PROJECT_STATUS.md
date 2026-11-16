@@ -61,3 +61,9 @@ new dependency_resolution and missing resource lists; compare with the old packa
 then load using an isolated BeamNG profile and record package-hash-matched visual,
 collision, driving and performance evidence. Do not expand extraction broadly until
 archive precedence, YDD members and texture scoping have targeted local fixtures.
+
+Publication blocker: local development commit `4ccb77a` was created and the working
+source checks passed. Both Git push and the connected GitHub create-branch API
+returned HTTP 403 (API: Resource not accessible by integration). No remote branch
+or PR was created. Repository contents/actions write permission is needed before
+`git push -u origin dev/cloud-foundation-regions` and opening a PR against master.
