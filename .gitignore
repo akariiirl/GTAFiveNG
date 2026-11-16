@@ -48,3 +48,7 @@ venv/
 *.log
 Thumbs.db
 Desktop.ini
+
+# Synthetic CI evidence and plotting cache
+ci-synthetic/
+.mpl-ci/
