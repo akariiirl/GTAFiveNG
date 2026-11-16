@@ -15,6 +15,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from validate_surfaces import triangles
+from selection import contains
 
 COLORS={'verified':'#16a34a','converted':'#248de5','partial':'#e8bf29','failure':'#e14b4b','unknown':'#989fa6'}
 
@@ -67,7 +68,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
         for e in ET.parse(p).getroot().findall('entities/Item'):
             if e.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
             pos=np.array([float(e.find('position').get(k)) for k in 'xyz'])
-            if np.linalg.norm(pos[:2]-origin[:2])>report['radius']: continue
+            if not contains(report.get('selection',{'center':origin[:2].tolist(),'radius':report['radius']}),pos[:2]): continue
             key=(e.findtext('archetypeName'),*pos); expected.add(key)
     converted={(Path(o['shapeName']).stem,*(np.array(o['position'])+origin)) for o in visual}
     # XML coordinates may differ in the last floating digit: compare rounded coordinates.
@@ -80,7 +81,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
     digest=hashlib.sha256((build/'conversion_report.json').read_bytes()).hexdigest()
     folder=output/(now.strftime('%Y%m%dT%H%M%S%fZ')+'_'+''.join(c if c.isalnum() or c in '-_' else '_' for c in checkpoint))
     folder.mkdir(parents=True,exist_ok=False)
-    summary={'checkpoint':checkpoint,'generated_utc':now.isoformat(),'build_date_utc':datetime.datetime.fromtimestamp((build/'conversion_report.json').stat().st_mtime,datetime.timezone.utc).isoformat(),'build':str(build),'report_sha256':digest,'coordinates':'GTA V original XY metres, Z up','raster_resolution_m':resolution,'raster_bounds_xy':[lo.tolist(),hi.tolist()],
+    summary={'checkpoint':checkpoint,'generated_utc':now.isoformat(),'build_date_utc':datetime.datetime.fromtimestamp((build/'conversion_report.json').stat().st_mtime,datetime.timezone.utc).isoformat(),'build':str(build),'report_sha256':digest,'selection':report.get('selection',{'center':origin[:2].tolist(),'radius':report['radius']}),'coordinates':'GTA V original XY metres, Z up','raster_resolution_m':resolution,'raster_bounds_xy':[lo.tolist(),hi.tolist()],
       'exported_projected_area_m2':int(m['visual'].sum())*resolution**2,'exported_road_projected_area_m2':int(m['roads'].sum())*resolution**2,'road_xy_collision_overlap_percent':float((m['roads']&m['collision']).sum()/max(1,m['roads'].sum())*100),
       'asset_completeness':{'expected_instances_in_available_selected_ymaps':len(expected),'converted_matching_instances':len(expected)-len(absent),'percent':100*(len(expected)-len(absent))/len(expected) if expected else None,'missing_placements':len(absent)},
       'missing_texture_names':report.get('missing_textures',[]),'dependency_resolution':report.get('dependency_resolution',{}),

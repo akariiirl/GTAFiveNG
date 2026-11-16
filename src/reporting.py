@@ -18,7 +18,8 @@ def compare(before, after, output):
     for count in counts:
         if any(not isinstance(v, (int,float)) or not math.isfinite(v) or v < 0 for v in count.values()):
             raise ValueError('Comparison requires nonnegative recorded counts')
-    same = all(reports[0].get(k) == reports[1].get(k) for k in ('origin','radius'))
+    selections = [r.get('selection', {'center':r.get('origin', [])[:2], 'radius':r.get('radius')}) for r in reports]
+    same = selections[0] == selections[1]
     result = {'schema': 1, 'report_sha256': [hashlib.sha256(p.read_bytes()).hexdigest() for p in paths],
               'same_selection': same, 'before': counts[0], 'after': counts[1],
               'delta': {k: counts[1][k]-counts[0][k] for k in METRICS},

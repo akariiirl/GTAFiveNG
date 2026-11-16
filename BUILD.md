@@ -121,3 +121,17 @@ source-relative paths so identically named textures in different dictionaries do
 not overwrite each other. Missing dictionary metadata stays unresolved; scoped
 mode never silently falls back to an unrelated flat DDS. Default mode preserves
 existing flat exports. Actual game dictionary metadata extraction remains deferred.
+
+Bounding-box conversion (original GTA metres, inclusive placement coordinates):
+
+```bash
+.venv/bin/python src/region.py --source generated/source-new --workspace generated/regions-box --bbox -500 -1500 -200 -1200
+```
+
+Use either `--bbox xmin ymin xmax ymax` or `--center X Y --radius R`. Bounds must
+have positive width/height. The converter, planner and progress maps share the
+same predicate. This selects whole placed assets, not clipped triangles; collision
+remains selected against converted visual extents. The level origin is the box
+midpoint; its size records box dimensions. The legacy report `radius` is the box's
+circumscribed radius for compatibility; `selection.bbox` is authoritative.
+Old radius commands and reports remain supported. No archive extraction is added.
