@@ -18,11 +18,12 @@ def triangles(path):
             yield v[idx]
 
 def validate(root,step=50):
+    if not isinstance(step, int) or step <= 0: raise ValueError('Sample step must be a positive integer')
     root=Path(root); level=root/'levels/los_santos_fazes'
     alltri=[]
     for p in sorted((level/'art/shapes').glob('collision*.dae')):
         alltri.extend(triangles(p))
-    t=np.concatenate(alltri); a=t[:,0]; b=t[:,1]-a; c=t[:,2]-a
+    t=np.concatenate(alltri) if alltri else np.empty((0,3,3)); a=t[:,0]; b=t[:,1]-a; c=t[:,2]-a
     den=b[:,0]*c[:,1]-b[:,1]*c[:,0]
     keep=np.abs(den)>1e-8; t=t[keep]; a=a[keep]; b=b[keep]; c=c[keep]; den=den[keep]
     cells=defaultdict(list); size=16
@@ -52,7 +53,7 @@ def validate(root,step=50):
                 z=heights(*pos[:2]); delta=float(np.min(np.abs(z-pos[2]))) if len(z) else None
                 samples.append({'asset':name,'position':pos.tolist(),'height_error':delta})
     failures=[s for s in samples if s['height_error'] is None or s['height_error']>0.5]
-    result={'sample_count':len(samples),'within_half_meter':len(samples)-len(failures),'failures':failures,'method':'Upward visual road triangle centroids, sampled at fixed stride per submesh; compare all collision hits in XY. This is not exhaustive gap detection or an in-game vehicle test.'}
+    result={'collision_triangles':len(t),'collision_evidence_available':bool(len(t)),'sample_count':len(samples),'within_half_meter':len(samples)-len(failures),'failures':failures,'method':'Upward visual road triangle centroids, sampled at fixed stride per submesh; compare all collision hits in XY. This is not exhaustive gap detection or an in-game vehicle test.'}
     (root/'surface_validation.json').write_text(json.dumps(result,indent=2))
     print(json.dumps({k:v for k,v in result.items() if k!='failures'},indent=2))
     return result
