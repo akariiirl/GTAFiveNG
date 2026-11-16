@@ -21,6 +21,7 @@ jobs:
           cache-dependency-path: requirements-cloud.txt
       - run: python -m pip install -r requirements-cloud.txt
       - run: python tools/run_tests.py --output ci-synthetic/test-summary.json
+      - run: python tools/streaming_showcase.py --output ci-synthetic/showcase
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -33,6 +34,7 @@ jobs:
             ci-synthetic/synthetic_neighborhood_progress.png
             ci-synthetic/synthetic_conversion_heatmap.png
             ci-synthetic/synthetic_progress_summary.json
+            ci-synthetic/showcase/**
           retention-days: 14
   reader:
     runs-on: ubuntu-latest

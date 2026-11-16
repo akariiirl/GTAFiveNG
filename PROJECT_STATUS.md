@@ -1,5 +1,25 @@
 # Project status — 2026-11-16
 
+## Predictive streaming cloud prototype (Issue #21, synthetic only)
+
+- Added an opt-in offline scheduler using vehicle position, heading, speed and
+  lookahead, plus dependency closure, load budgets, retained-chunk hysteresis,
+  missing-dependency reporting and a collision inventory signal. `drivable_chunks`
+  remains empty; no engine API or gameplay state is claimed.
+- Added original synthetic tests for stopping/reverse/turn/fast motion, boundary
+  selection, teleport, dependency failure, collision distinction and load pressure.
+- Reproducible 1,200-chunk, 80-tick simulation: 26 peak active, 322 load operations,
+  9,300,000 estimated payload bytes. This is a model estimate, not process/engine
+  memory, performance or collision readiness.
+- `tools/streaming_showcase.py` exports a self-contained responsive HTML page,
+  static isometric PNG, SVG scheduler graph and JSON summary; all visuals are
+  labeled synthetic. Run instructions and the two-chunk local test are in
+  `docs/LOCAL_EXECUTION.md`.
+- Pending full test/build/CI/PR verification. BeamNG.Earth-inspired ideas are
+  implemented independently; no engine streaming API is asserted. Two-chunk
+  vehicle behavior, actual collision loading, FPS/RAM and moving-origin behavior
+  still require PC/BeamNG testing.
+
 Read this first. Project Los Santos is a partial GTA V Legacy to BeamNG conversion prototype, not a complete map. Existing source changes were already uncommitted when this handoff began; retain them. `git status` is authoritative. Older PROGRESS.md, NEXT_STEPS.md, START_HERE.md and CONVERSION_REPORT.md describe earlier checkpoints and can conflict with current code.
 
 ## Verified in this workspace

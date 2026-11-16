@@ -62,3 +62,56 @@ all DLC combinations and actual BeamNG behavior remain local validation blockers
 Optional streaming-readiness work is deliberately excluded from the normal launch.
 See `docs/RUNTIME_EXPERIMENT.md` for the separate empty-scene profile, generated
 prefab plan, version-dependent Lua adapter and explicit engine-validation checklist.
+
+## Two-adjacent-chunk streaming validation (experimental)
+
+Do not treat the offline predictive planner as an engine loader or drivable-state
+signal. For the first local experiment, use two adjacent synthetic or converted
+chunks with a road crossing the shared edge. Keep the existing package/profile
+unchanged and use a fresh isolated profile. Record the composed package SHA-256
+alongside BeamNG version, logs, screenshots and each observation.
+
+1. Verify each chunk's collision files are present and run structural validation;
+   inspect/raycast the road on both sides of the boundary before driving.
+2. Load stationary, confirm both visual chunks and collision surfaces, then cross
+   the boundary slowly in both directions. Record missing surfaces, visible gaps,
+   load/unload timestamps and any stalls.
+3. Repeat with unload/reload, then collect BeamNG FPS and process RAM readings at
+   fixed intervals. Record the exact package hash with all results; cloud byte and
+   Lua-heap estimates are not engine RAM/VRAM/FPS measurements.
+4. Stop driving if either side's collision cannot be confirmed. Collision
+   inventory/availability is not proof of collision loaded or drivable.
+
+### Synthetic showcase and CI preview
+
+Generate a self-contained dashboard, isometric PNG, SVG scheduler chart and JSON
+summary without any game data:
+
+```powershell
+./.venv/Scripts/python.exe tools/streaming_showcase.py --output generated/streaming-showcase
+```
+
+Open `generated/streaming-showcase/index.html` locally. In GitHub, open the
+successful Source-only tests Actions run and download the
+`synthetic-evidence-windows-latest` artifact; extract it and open
+`showcase/index.html` on a phone. The artifact is synthetic-only and expires after
+14 days. The PNG can be viewed directly in the artifact or downloaded separately.
+No server or external JS/CDN is used.
+
+The built-in scenario is fixed at 1,200 synthetic chunks and 80 ticks. The current
+result is 26 peak active chunks, 322 scheduled loads and 9,300,000 estimated
+resident payload bytes. Run twice and compare `streaming-summary.json` and
+`streaming-preview.png` hashes to check deterministic output. Estimates exclude
+engine/interpreter overhead and are not RAM, VRAM, FPS, collision-build or hitch
+measurements. The scene is a static 3D-style illustration, not converted geometry.
+
+The planner is offline and opt-in. Its `collision_ready` list means only that
+synthetic/input inventory marked collision available; `drivable_chunks` is always
+empty. It does not call the Lua prototype or BeamNG. Existing composed maps and
+normal launch behavior are unchanged.
+
+For local Lua mock and source validation, run `./.venv/Scripts/python.exe
+tools/run_tests.py --output generated/streaming-tests.json`; the existing runtime
+tests execute Lua through pinned Lupa. Build AssetReader with
+`dotnet build src/AssetReader/AssetReader.csproj -c Release` when validating the
+native reader. This streaming milestone does not change AssetReader.
