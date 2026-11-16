@@ -1,5 +1,52 @@
 # Project status — 2026-11-16
 
+## Playable connected corridor — 2026-11-16
+
+- Reused the completed 297,372-resource catalog and CodeWalker selection evidence.
+  Fixed anchor-only selection by transforming archetype bounds; filtered prepared
+  YMAPs retain exactly the selected entities. Collision planning now covers the
+  full selected visual bounds. Assetless metadata is reported explicitly rather
+  than treated as a missing drawable. No bootstrap or game modifications.
+- Sequential local processing saved the first improved package before expansion.
+  Corrected stage01 reused 508 exports and added 61 collision resources; cache
+  replay recorded 1,071 hits and 61 misses. Stage02 recovered 569 receipts from
+  1,107 tasks and recorded 1,616 cache hits / 804 misses. All extraction receipts
+  were verified. Frozen local source, logs, progress, locks and completion hashes
+  support detached execution; a completed-job resume verified packages and skipped
+  extraction/conversion. The bounded two-stage job is completed.
+- The 400 x 600 m stage selected 3,928 HD entries and emitted 3,365 visual
+  placements, 632 drawables, 3,695,507 visual triangles, 3,223,930 collision
+  triangles and 1,103 textures. The 563 entries not emitted include unsupported,
+  assetless and duplicate entries; this is not a claim of complete scenery.
+  Five texture names remain unresolved, and layered ground shaders still appear
+  as white patches. Structural validation passes. Whole-road offline sampling:
+  15,094 of 15,122 within 0.5 m; 28 exceptions remain explicitly reported.
+- Preserved a smaller package with 269.041 m of in-game movement and 268 matching
+  visible-asphalt/collision samples. The larger package reached its route target
+  after 531.573 m, excluding the first two seconds of initial vehicle setup.
+  All 535 later vehicle-center samples match non-decal road/road-edge triangles
+  and runtime ground rays within 0.5 m. A strict asphalt-only audit initially
+  missed one point; exact source inspection identified IM_Road_edge_001 at that
+  point, and the separate corrected audit preserves the initial result. This is
+  sampled route evidence, not exhaustive tire-contact or whole-map validation.
+- At least one four-way intersection was visually inspected and traversed; the
+  smaller test also exercised a turn. No inventory-wide intersection pass or
+  traffic support is claimed. Game screenshots show recognizable streets,
+  buildings, signs and the freeway, with incomplete map edges and ground materials.
+  Desktop capture overstates brightness compared with the game's own PNGs.
+- Latest tested package (183,759,429 bytes):
+  D:/GTAFiveNG-local/master-integration-20261116/generated/real-integration-01/
+  corridor-drive-03/neighborhood-daylight.zip. Its hash-checked manual launcher is
+  launch-playable.ps1 beside it. Telemetry and nine screenshots are under
+  profile/current; drive-audit-road-surfaces.json records the 531.573 m audit.
+  The job/config/resume proof and both original packages remain in sibling
+  playable-corridor-02. Previous prototypes and neighborhood03 remain preserved.
+- Focused source regressions: 26 passed, then the expanded five-test corridor
+  suite passed. CI must pass before merge. Next focused defect: implement the
+  actual layered ground material bindings responsible for white terrain patches;
+  do not substitute invented geometry or claim the entire exported region passes.
+
+
 ## First real CodeWalker-selected road prototype — 2026-11-16
 
 - Reused the 297,372-resource native catalog without bootstrap. Actual pinned
