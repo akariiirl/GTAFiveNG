@@ -81,3 +81,12 @@ conversion, which retains legacy flat DDS behavior. Synthetic tests exercise
 conflicts, priorities, chains/cycles, YDD conversion and texture scope/escape checks.
 Real archive mount order, hash-only member names and actual texture fidelity remain
 PC validation/integration work. No licensed assets accessed. Credit meter unavailable.
+
+### Issue #2 B — exported-source planning
+
+Phase A PR #3 passed GitHub Actions (runs 43901240885 and 43901222383).
+Added read-only radius/bounding-box planning, deterministic geographic chunk IDs,
+source content fingerprints, per-chunk dependencies and verified/pending task
+reconciliation. 18 source-only tests pass. Plans do not execute extraction, cover
+world-space collision bounds or replace the existing radius converter. Neighboring
+plans identify shared names but do not yet share converted geometry on disk.
