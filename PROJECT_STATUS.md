@@ -1,5 +1,11 @@
 # Project status — 2026-11-16
 
+## CodeWalker nested-mount diagnostics — 2026-11-16
+
+- The local CodeWalker probe reports 3,920 active archive mappings and 646 patch mappings, with zero logged errors. Some patches replace nested RPF archives, not individual entries. Comparing each of the 47 relevant metadata conflicts after applying archive-prefix patches still produced 26 with one candidate in the reported active archives, 20 with none, and one with two. This is diagnostic evidence, not proof of the running game's selection: never silently choose a candidate from this result.
+- The missing cases include archive paths superseded by other virtual mounts; the duplicate includes simultaneously listed base and DLC archives. The pinned CodeWalker implementation also uses all RPFs for YTYP loading and does not establish GTA runtime precedence. A small 23 m region is being evaluated locally as a fallback. No new extraction, package or driving result is established at this checkpoint.
+- `src/mount_diagnostics.py` compares normalized physical paths with explicit nested patch mappings, reports zero/one/multiple candidates, and rejects cycles, conflicting normalized mappings and error-bearing evidence. Synthetic tests cover archive substitution and unresolved cases. Local game-derived diagnostic files remain ignored and must not be uploaded.
+
 ## Local region conflict audit — 2026-11-16
 
 - A completed 297,372-resource native catalog was reused without re-running bootstrap. A region-aware scan of the two adjacent 200 m boxes found 47 conflicting metadata names potentially relevant to the selection and 2,604 unrelated conflicting names. The local report preserves the candidates; no active mount order was inferred.
