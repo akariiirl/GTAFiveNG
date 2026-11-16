@@ -6,12 +6,52 @@ mount evidence, not a claim to reconstruct GTA's active DLC configuration.
 """
 import collections
 import json
+import re
 import xml.etree.ElementTree as ET
 
 
 def load_policy(source):
     path = source / 'dependency-policy.json'
     return json.loads(path.read_text()) if path.exists() else {}
+
+
+def joaat(name):
+    """RAGE's case-insensitive Jenkins one-at-a-time name hash."""
+    value = 0
+    for byte in name.lower().encode('ascii'):
+        value = (value + byte) & 0xffffffff
+        value = (value + (value << 10)) & 0xffffffff
+        value ^= value >> 6
+    value = (value + (value << 3)) & 0xffffffff
+    value ^= value >> 11
+    return (value + (value << 15)) & 0xffffffff
+
+
+def archetype_name_index(source):
+    """Index only explicit YTYP names; hash collisions remain ambiguous."""
+    names = collections.defaultdict(set)
+    for path in sorted(source.glob('*.ytyp.xml')):
+        for item in ET.parse(path).getroot().findall('.//archetypes/Item'):
+            name = item.findtext('name', '').strip().lower()
+            if name:
+                try:
+                    names[joaat(name)].add(name)
+                except UnicodeEncodeError:
+                    continue
+    return names
+
+
+def resolve_hash_reference(value, names):
+    """Resolve hash-only XML references only when one YTYP name matches."""
+    match = re.fullmatch(r'hash_([0-9a-fA-F]{8})', value.strip())
+    if not match:
+        return value.lower(), None
+    number = int(match.group(1), 16)
+    candidates = sorted(names.get(number, ()))
+    if len(candidates) == 1:
+        return candidates[0], {'reference': value, 'status': 'resolved', 'name': candidates[0]}
+    status = 'ambiguous' if candidates else 'unresolved'
+    return value.lower(), {'reference': value, 'status': status, 'candidates': candidates}
 
 
 def choose(name, paths, policy, overrides):
