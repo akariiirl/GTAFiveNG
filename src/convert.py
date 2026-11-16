@@ -220,7 +220,7 @@ def jsonl(path,rows):
     path.parent.mkdir(parents=True,exist_ok=True)
     path.write_text(''.join(json.dumps(r,separators=(',',':'))+'\n' for r in rows))
 
-def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_sizes=(),max_collision_triangles=None):
+def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_sizes=(),max_collision_triangles=None,preselected=False):
     validate_settings(lod_sizes,max_collision_triangles)
     config=selection(center,radius,bbox)
     center,radius,region_size=frame(config)
@@ -236,7 +236,7 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_
         for e in ET.parse(p).getroot().findall('entities/Item'):
             if e.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
             pos=vec(e.find('position')); name=e.findtext('archetypeName'); key=(name,*pos)
-            if not contains(config,pos[:2]) or key in used: continue
+            if (not preselected and not contains(config,pos[:2])) or key in used: continue
             used.add(key)
             if name not in drawables: report['missing_assets'].add(name); continue
             if name not in converted:

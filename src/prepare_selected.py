@@ -18,10 +18,11 @@ def prepare(root, workspace, target_name='prepared'):
     execute(tasks,'unused','unused',source,workspace/'tasks.json',runner=lambda *a,**k:SimpleNamespace(returncode=0))
     names=defaultdict(set)
     snapshot=Path(json.loads((root/'catalog/bootstrap.json').read_text())['snapshot'])
-    for line in (snapshot/'inventory.jsonl').open():
-        r=json.loads(line); n=Path(r['name']).stem
-        try:names[joaat(n)].add(n)
-        except UnicodeEncodeError:pass
+    with (snapshot/'inventory.jsonl').open() as stream:
+        for line in stream:
+            r=json.loads(line); n=Path(r['name']).stem
+            try:names[joaat(n)].add(n)
+            except UnicodeEncodeError:pass
     for p in source.glob('*.ytyp.xml'):
         for i in ET.fromstring(safe_metadata(p.read_bytes())).findall('.//archetypes/Item'):
             n=i.findtext('name','')
@@ -37,10 +38,19 @@ def prepare(root, workspace, target_name='prepared'):
         if value:unresolved.add(m.group(1))
         return m.group(0)
     target=workspace/target_name; target.mkdir(exist_ok=False)
+    placements=workspace/'placements.json'; selected=defaultdict(set)
+    if placements.exists():
+        for p in json.loads(placements.read_text()):selected[p['map']].add(p['index'])
     for p in source.iterdir():
         if p.is_dir(): shutil.copytree(p,target/p.name)
         elif p.name.endswith('.xml'):
             data=safe_metadata(p.read_bytes()).decode('utf-8-sig')
+            if placements.exists() and p.name.endswith('.ymap.xml'):
+                tree=ET.fromstring(data); entities=tree.find('entities')
+                if entities is not None:
+                    for index,item in enumerate(list(entities)):
+                        if index not in selected[p.name]:entities.remove(item)
+                data=ET.tostring(tree,encoding='unicode')
             (target/p.name).write_bytes(re.sub(r'>hash_([0-9a-fA-F]{8})<',replace,data).encode('utf-8'))
     shutil.copyfile(source/'dependency-policy.json',target/'dependency-policy.json')
     result={'verified_receipts':len(tasks['tasks']),'hash_replacements':replaced,'remaining_hash_references':sorted(unresolved),'original_exports_preserved':True}

@@ -20,6 +20,10 @@ The exact clean setup above is a proposed reconstruction, not yet verified on a 
 
 ## Local conversion
 
+For bounds-aware neighborhood expansion from a completed catalog, see
+[bounded local corridor execution](docs/CORRIDOR_EXECUTION.md). It reuses the
+existing reader, checkpoints and mesh cache in a detached local process.
+
 For a completed catalog blocked by archive ambiguity, see
 [CodeWalker selection diagnostics](docs/SELECTION_EVIDENCE.md). This uses a
 separate read-only probe and preserves the existing reader receipts and catalog.
