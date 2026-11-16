@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from primitives import rounded_shape
 from selection import selection, contains, frame
-from resource_cache import cached_drawable
+from resource_cache import cached_drawable, cached_collision, cached_texture
 from dependencies import resolve, TextureCatalog
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -256,7 +256,7 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
         if 'ma@' in p.name: continue
         b=ET.parse(p).getroot().find('Bounds'); lo=vec(b.find('BoxMin')); hi=vec(b.find('BoxMax'))
         if np.any(hi[:2]<coverage_lo) or np.any(lo[:2]>coverage_hi): continue
-        meshes=bounds_mesh(p,origin,report)
+        meshes=cached_collision(shared_cache,p,origin,report,bounds_mesh) if shared_cache is not None else bounds_mesh(p,origin,report)
         if not meshes: continue
         name='collision_'+hashlib.sha256(p.name.encode()).hexdigest()[:12]
         # Torque requires a nonnegative render detail even for a hidden physics shape.
@@ -270,8 +270,12 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None):
     td=level/'art/textures'; td.mkdir(exist_ok=True)
     report['dds_mip_headers_repaired']=0
     for tex in texture_catalog.used_records():
-        data,repaired=normalized_dds(tex['path'].read_bytes())
-        (td/tex.get('target',tex['path'].stem.lower()+'.dds')).write_bytes(data)
+        target=td/tex.get('target',tex['path'].stem.lower()+'.dds')
+        if shared_cache is not None:
+            repaired=cached_texture(shared_cache,tex['path'],target,normalized_dds)
+        else:
+            data,repaired=normalized_dds(tex['path'].read_bytes())
+            target.write_bytes(data)
         report['dds_mip_headers_repaired']+=int(repaired)
     (level/'info.json').write_text(json.dumps({'title':'Los Santos — South Central prototype','description':'Local GTA V conversion. Partial region; unfinished edges and missing props.','authors':'Local conversion experiment','size':region_size,'defaultSpawnPointName':'spawn_default','supportsTraffic':False},indent=2))
     jsonl(level/'main/items.level.json',[{'name':'MissionGroup','class':'SimGroup'}])

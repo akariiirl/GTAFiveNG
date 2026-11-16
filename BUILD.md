@@ -176,3 +176,17 @@ Python verifies returned receipts and writes converter-compatible scoped texture
 policy. Embedded textures inherit the known external TXD. Existing filter/report
 reader commands remain available. No GTA extraction success is claimed in cloud.
 CI validates native/Python naming and unsafe-path rejection without loading keys.
+
+Shared cache now also covers world-space collision meshes and normalized DDS data.
+Texture hits verify and copy binary payloads in blocks; identical normalized outputs
+share a binary payload. `--shared-cache --repair-cache` quarantines corrupt entries
+under the cache's `quarantine/` directory before regeneration. Default behavior still
+fails on corruption. Repair mode uses a distinct region build signature, preserving
+any earlier failed build. Existing converted packages are never repaired in place.
+
+```bash
+.venv/bin/python tools/benchmark_cache.py --output generated/cache-benchmark-new.json
+```
+
+This small original synthetic DDS benchmark reports cold/warm wall time and traced
+Python allocations, not RSS, game performance or a representative full-city load.

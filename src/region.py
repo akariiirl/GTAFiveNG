@@ -25,18 +25,19 @@ def region_id(center=None, radius=None, bbox=None):
     return 'region-' + hashlib.sha256(json.dumps(selection(center, radius, bbox), sort_keys=True).encode()).hexdigest()[:16]
 
 
-def run(source, workspace, center=None, radius=None, maps=True, bbox=None, shared_cache=False):
+def run(source, workspace, center=None, radius=None, maps=True, bbox=None, shared_cache=False, repair_cache=False):
     source, workspace = Path(source).resolve(), Path(workspace).resolve()
     if not source.is_dir():
         raise ValueError('Exported source directory does not exist')
     if workspace == source or source in workspace.parents or workspace in source.parents:
         raise ValueError('Keep source and workspace directories separate')
+    if repair_cache and not shared_cache: raise ValueError('Cache repair requires shared caching')
     config = selection(center, radius, bbox)
     inputs = fingerprints(source)
     if not any(n.endswith('.ymap.xml') for n in inputs):
         raise ValueError('No exported YMAP XML found')
     pipeline = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in Path(__file__).parent.glob('*.py')}
-    signature = {'schema': 1, 'selection': config, 'inputs': inputs, 'pipeline': pipeline, 'maps': maps, 'shared_cache':bool(shared_cache)}
+    signature = {'schema': 1, 'selection': config, 'inputs': inputs, 'pipeline': pipeline, 'maps': maps, 'shared_cache':bool(shared_cache),'repair_cache':bool(repair_cache)}
     digest = hashlib.sha256(json.dumps(signature, sort_keys=True).encode()).hexdigest()
     target = workspace / region_id(center, radius, bbox) / digest
     manifest = target / 'region-manifest.json'
@@ -49,7 +50,7 @@ def run(source, workspace, center=None, radius=None, maps=True, bbox=None, share
     if target.exists():
         raise FileExistsError('Incomplete previous build preserved: ' + str(target))
     target.mkdir(parents=True)
-    cache = ResourceCache(workspace/'_shared_drawables') if shared_cache else None
+    cache = ResourceCache(workspace/'_shared_drawables',recover=repair_cache) if shared_cache else None
     with contextlib.redirect_stdout(io.StringIO()):
         report = build(source, target / 'build', center, radius, bbox=bbox, shared_cache=cache)
         validate(target / 'build')
@@ -58,7 +59,7 @@ def run(source, workspace, center=None, radius=None, maps=True, bbox=None, share
             from progress_maps import generate
             generate(target / 'build', source, target / 'progress', region_id(center, radius, bbox))
     manifest.write_text(json.dumps({'signature': signature, 'outputs': fingerprints(target),
-                                    'shared_cache':{'hits':cache.hits,'misses':cache.misses} if cache else None,
+                                    'shared_cache':{'hits':cache.hits,'misses':cache.misses,'recovered':cache.recovered} if cache else None,
                                     'in_game_verified': False}, indent=2))
     return target
 
@@ -70,7 +71,8 @@ if __name__ == '__main__':
     parser.add_argument('--center', type=float, nargs=2)
     parser.add_argument('--radius', type=float)
     parser.add_argument('--bbox', nargs=4, type=float)
+    parser.add_argument('--repair-cache', action='store_true')
     parser.add_argument('--shared-cache', action='store_true')
     parser.add_argument('--no-maps', action='store_true')
     args = parser.parse_args()
-    print(run(args.source, args.workspace, args.center, args.radius, not args.no_maps, bbox=args.bbox, shared_cache=args.shared_cache))
+    print(run(args.source, args.workspace, args.center, args.radius, not args.no_maps, bbox=args.bbox, shared_cache=args.shared_cache, repair_cache=args.repair_cache))
