@@ -7,6 +7,9 @@ from collections import defaultdict
 
 NS={'c':'http://www.collada.org/2005/11/COLLADASchema'}
 
+def is_drivable_road(name):
+    return name.startswith('sc1_rd_r') and 'shadow' not in name.lower()
+
 def triangles(path):
     root=ET.parse(path)
     for mesh in root.findall('.//c:geometry/c:mesh',NS):
@@ -17,7 +20,7 @@ def triangles(path):
             idx=np.fromstring(tri.findtext('c:p',namespaces=NS),sep=' ',dtype=int).reshape(-1,3)
             yield v[idx]
 
-def validate(root,step=50):
+def validate(root,step=50,output=None):
     if not isinstance(step, int) or step <= 0: raise ValueError('Sample step must be a positive integer')
     root=Path(root); level=root/'levels/los_santos_fazes'
     alltri=[]
@@ -42,7 +45,7 @@ def validate(root,step=50):
     objects=[json.loads(l) for l in (level/'main/MissionGroup/Geometry/items.level.json').read_text().splitlines()]
     for obj in objects:
         name=obj.get('sourceArchetype',Path(obj.get('shapeName','')).stem)
-        if not name.startswith('sc1_rd_r') or obj.get('collisionType')!='None': continue
+        if not is_drivable_road(name) or obj.get('collisionType')!='None': continue
         transform=np.array(obj['rotationMatrix']).reshape(3,3)
         for local in triangles(root/obj['shapeName'].lstrip('/')):
             world=(local*np.array(obj['scale']))@transform+np.array(obj['position'])
@@ -54,7 +57,7 @@ def validate(root,step=50):
                 samples.append({'asset':name,'position':pos.tolist(),'height_error':delta})
     failures=[s for s in samples if s['height_error'] is None or s['height_error']>0.5]
     result={'collision_triangles':len(t),'collision_evidence_available':bool(len(t)),'sample_count':len(samples),'within_half_meter':len(samples)-len(failures),'failures':failures,'method':'Upward visual road triangle centroids, sampled at fixed stride per submesh; compare all collision hits in XY. This is not exhaustive gap detection or an in-game vehicle test.'}
-    (root/'surface_validation.json').write_text(json.dumps(result,indent=2))
+    Path(output or root/'surface_validation.json').write_text(json.dumps(result,indent=2))
     print(json.dumps({k:v for k,v in result.items() if k!='failures'},indent=2))
     return result
 
