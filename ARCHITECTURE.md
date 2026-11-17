@@ -75,3 +75,15 @@ orientation reversal/empty output falls back. Normals/UVs average within cluster
 this is not a topology or texture-quality guarantee. Collision limits reject,
 never silently decimate/drop physics. Default packages and detail selection are
 unchanged. CI publishes only allowlisted maps from original synthetic test fixtures.
+
+Experimental runtime streaming (2026-11-17): a separate local package keeps the
+47-cell art library and stores per-256 m-cell object manifests. `src/lsf_stream.lua`
+starts with an empty geometry scene, creates nearby `TSStatic` objects under a
+frame budget, counts shared-object references, deletes unneeded cells, and
+reloads collision. It uses measured player-position changes for lookahead and
+pauses before an unready cell. The 20,000-object cap evicts nonrequested cells
+before blocking a needed neighbor. BeamNG tests verified a short cross-cell
+drive, scene-object deletion, and partial physical-memory recovery. Unloaded
+world map imagery, distant LOD, long/high-speed drives, and VRAM recovery remain
+unverified; the preserved static package is the rollback. See the dated status
+and `docs/BEAMNG_EARTH_AUDIT.md`.

@@ -279,3 +279,11 @@ The PowerShell entrypoint is `tools/run_local.ps1`; it invokes `local_workflow.p
 `src/runtime_plan.py` exports a separate experimental prefab/asset tree from a
 composed build. See `docs/RUNTIME_EXPERIMENT.md`; no normal package/profile changes.
 Pinned Lupa runs source-only Lua adapter mocks in CI, not a BeamNG engine.
+
+The experimental `src/lsf_stream.lua` controller is packaged only by the local,
+ignored 47-cell streaming-probe scripts. It reuses an existing composed asset
+library, writes cell manifests, and uses a fresh ZIP and isolated BeamNG profile.
+Those machine-specific scripts and proprietary ZIPs are not part of this source
+repository. The validated probe, CRC receipt, game logs, and limitations are
+identified in `PROJECT_STATUS.md`; do not infer streaming success from ZIP CRC
+or the older prefab mock tests alone.
