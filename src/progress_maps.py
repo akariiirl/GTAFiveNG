@@ -14,7 +14,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
-from validate_surfaces import triangles
+from validate_surfaces import triangles,is_road_asset
 from selection import contains
 
 COLORS={'verified':'#16a34a','converted':'#248de5','partial':'#e8bf29','failure':'#e14b4b','unknown':'#989fa6'}
@@ -57,7 +57,7 @@ def generate(build,source,output,checkpoint=None,resolution=2,boundary=None):
             if not collision: t=(t*np.array(o['scale']))@np.array(o['rotationMatrix']).reshape(3,3)+o['position']
             t=t+origin
             mask_triangles(masks['collision' if collision else 'visual'],t,lo,resolution)
-            if not collision and name.startswith('sc1_rd_r'): mask_triangles(masks['roads'],t,lo,resolution)
+            if not collision and is_road_asset(name): mask_triangles(masks['roads'],t,lo,resolution)
     m={k:np.array(v,dtype=bool) for k,v in masks.items()}
     grid=np.zeros(m['visual'].shape,dtype=np.uint8)
     grid[m['visual']]=1; grid[m['visual'] & m['collision']]=2

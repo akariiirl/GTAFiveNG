@@ -12,6 +12,7 @@ from convert import quat_matrix,vec,value
 from dependencies import joaat
 from extraction import export_name
 from local_workflow import safe_metadata
+from validate_surfaces import is_road_asset
 
 
 def norm(path): return path.lower().replace('\\','/')
@@ -113,7 +114,7 @@ def plan(root, output, evidence_file='codewalker-selection-01.json', bbox=None):
             visual=evidence[ext].get(str(name_hash(key)))
             if visual: paths.add(norm(visual))
             else: missing.append(ext+':'+key)
-            if not name.startswith('prop_') and re.search(r'_rd_r\d|_road',name): road+=1
+            if is_road_asset(name): road+=1
             txd=a.findtext('textureDictionary','')
             if txd and txd!='hash_00000000':
                 h=str(name_hash(txd)); seen=set(); previous=None
