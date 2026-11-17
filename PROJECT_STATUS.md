@@ -1,5 +1,10 @@
 # Project status — 2026-11-16
 
+## Cross-city route and terrain checkpoint — 2026-11-17
+
+- Saved a separate Probe 05 and a 2,196.07 m offline visual-road candidate route through 11 technical cells. In-game testing confirmed a north-facing, four-wheel-supported spawn, but a bounded drive hit a freeway divider after 26.16 m of zero-damage travel. No cross-city drive is verified.
+- Exact YBN comparisons reproduced the hit in base, patchday1ng and patchday27ng versions. Ten composed copies of `fwy_01_4.ybn` geometry agree within 0.00001 m, exposing a collision deduplication defect for the next build. Existing original GTA ground meshes already convert; the coarse mainland min/max heightmap cannot safely replace them. See `docs/CROSS_CITY_CHECKPOINT_2026-11-17.md` for evidence, local paths and limitations.
+
 ## Experimental streamed 47-cell BeamNG run — 2026-11-17
 
 - Reused the existing 47-cell converted asset library and 256 m manifests; no GTA extraction or conversion was repeated. `src/lsf_stream.lua` creates and deletes shared `TSStatic` objects by cell, preloads neighbors from measured player motion, rebuilds collision, pauses before an unready cell, and enforces a 20,000-object cap. BeamNG.Earth's implemented object lifecycle and collision APIs were audited in `docs/BEAMNG_EARTH_AUDIT.md`; no Earth source was transplanted.
