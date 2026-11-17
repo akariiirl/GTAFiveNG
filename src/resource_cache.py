@@ -68,18 +68,20 @@ def cached_drawable(cache, xml, name, materials, textures, report, convert):
     entry = cache.get(key)
     if entry is None:
         local_materials = {}; local_textures = {k:{**v,'used':False} for k,v in textures.items()}
-        local_report = {'missing_textures':set(),'degenerate_triangles_removed':0}
+        local_report = {'missing_textures':set(),'degenerate_triangles_removed':0,'nonfinite_attribute_triangles_removed':0}
         meshes = convert(xml,name,local_materials,local_textures,local_report)
         entry = {'meshes':[{k:v.tolist() if isinstance(v,np.ndarray) else v for k,v in mesh.items()} for mesh in meshes],
                  'materials':local_materials,'used_textures':[k for k,v in local_textures.items() if v['used']],
                  'missing_textures':sorted(local_report['missing_textures']),
                  'skipped_skinned_models':sorted(local_report.get('skipped_skinned_models',set())),
-                 'degenerate_triangles_removed':local_report['degenerate_triangles_removed']}
+                 'degenerate_triangles_removed':local_report['degenerate_triangles_removed'],
+                 'nonfinite_attribute_triangles_removed':local_report['nonfinite_attribute_triangles_removed']}
         cache.put(key,entry)
     materials.update(entry['materials'])
     for key in entry['used_textures']: textures[key]['used'] = True
     report['missing_textures'].update(entry['missing_textures'])
     report['degenerate_triangles_removed'] += entry['degenerate_triangles_removed']
+    report['nonfinite_attribute_triangles_removed'] = report.get('nonfinite_attribute_triangles_removed',0) + entry.get('nonfinite_attribute_triangles_removed',0)
     if entry['skipped_skinned_models']: report.setdefault('skipped_skinned_models',set()).update(entry['skipped_skinned_models'])
     return [{k:np.asarray(v,dtype=int if k=='i' else float) if k in ('v','i','n','uv') and v is not None else v for k,v in mesh.items()} for mesh in entry['meshes']]
 
