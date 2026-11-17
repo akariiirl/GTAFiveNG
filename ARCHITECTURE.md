@@ -87,3 +87,11 @@ drive, scene-object deletion, and partial physical-memory recovery. Unloaded
 world map imagery, distant LOD, long/high-speed drives, and VRAM recovery remain
 unverified; the preserved static package is the rollback. See the dated status
 and `docs/BEAMNG_EARTH_AUDIT.md`.
+
+Collision composition (2026-11-17): `compose.py` groups a hidden collision object
+by its original exported source identifier and non-positional object properties.
+It reuses a canonical shape only when the remaining Collada XML, including
+triangle indices/winding and material bindings, matches exactly and every
+ordered world-space vertex differs by at most 0.00002 m. Nonmatching or
+uncertain geometry stays separate. The policy does not infer GTA archive
+precedence or remove a divider merely because its name repeats.
