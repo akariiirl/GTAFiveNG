@@ -18,6 +18,10 @@ dotnet build src/AssetReader/AssetReader.csproj -c Release --no-restore
 
 The exact clean setup above is a proposed reconstruction, not yet verified on a fresh machine. CodeWalker.Core references NuGet dependencies including SharpDX 4.2.0; restore may require network access. Existing `tools/python.ps1`, `tools/launch_test.ps1` and `config/project.json` contain this machine's paths. `config/project.json` is descriptive; check code arguments rather than assuming it drives the converter. The Python and build paths above avoid modifying those working scripts.
 
+## Layered ground upgrade for a preserved streamed ZIP
+
+Run `src/terrain_package.py SOURCE_ZIP NEW_ZIP --shared-xml ACTIVE_EXTRACTED_XML --cells-root EXISTING_GENERATED_ROOT --report NEW_REPORT.json` with a Python environment containing NumPy. The cells root may contain `tech_*/cell/prepared-000` folders directly or inside expansion folders. Use a new output path. The tool checks YDR source identity and scoped texture bindings before changing any material, retains original geometry and collision, and writes unresolved bindings to the report. The resulting ZIP requires an integrity check and an actual BeamNG visual/physics test before claiming in-game terrain fidelity.
+
 ## Local conversion
 
 For bounds-aware neighborhood expansion from a completed catalog, see

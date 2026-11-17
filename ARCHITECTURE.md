@@ -9,6 +9,17 @@ The pipeline is a local, read-only prototype for a subset of GTA V Legacy, not a
 
 Data boundaries: tracked project source and documents are portable; `vendor/CodeWalker` must be restored separately, while `generated/`, `builds/`, game files and game-derived assets remain local and ignored. Reports inside generated directories also stay local; PROJECT_STATUS.md carries a short non-asset summary. LICENSES.md covers the relevant distribution constraints.
 
+Terrain materials (2026-11-17): original YDR terrain meshes retain GTA vertices,
+elevations, UV coordinates and YBN collision. `terrain.py` uses GTA Colour1 green
+and blue weights, following the pinned CodeWalker terrain shader's four-layer
+selection, to select a source diffuse texture per triangle. `convert.py` uses
+this for new cell conversions. `terrain_package.py` applies it to existing
+streamed ZIPs using only unambiguous active YDR XML and scoped texture bindings;
+it copies all scene placement, collision and cell manifests unchanged. The
+ordinary BeamNG material approximates the blend by choosing one dominant layer
+per triangle. It does not reproduce four-layer interpolation or masked shader
+variants exactly. No TerrainBlock or synthetic height field is introduced.
+
 Cloud additions (2026-11-16): `dependencies.py` indexes flat exported YDR/YFT XML,
 resolves basic YTYP `name` → `assetName` aliases, and reports ambiguous names and
 unresolved aliases in `dependency_resolution`. It deliberately does not guess
