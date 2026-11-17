@@ -36,6 +36,11 @@ class CompositionTests(unittest.TestCase):
             second=compose([b,a],root/'reversed')
             self.assertEqual((result/'composed.zip').read_bytes(),(second/'composed.zip').read_bytes())
             self.assertEqual(compose([b,a],result),result)
+            expanded=compose([result,a],root/'expanded')
+            expanded_report=json.loads((expanded/'conversion_report.json').read_text())
+            self.assertEqual(expanded_report['visual_instances'],3)
+            self.assertEqual(expanded_report['collision_triangles'],1)
+            self.assertEqual(validate(expanded,step=1)['within_half_meter'],3)
 
     def test_same_texture_names_and_material_names_do_not_collide(self):
         import struct
