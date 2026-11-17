@@ -32,23 +32,47 @@ def overlaps_placement(item, archetype, box):
     b=placement_bounds(item,archetype)
     return bool(np.all(b[2:]>=box[:2]) and np.all(b[:2]<=box[2:]))
 
+def map_may_overlap(root, box):
+    """Use GTA streaming extents only as a conservative YMAP prefilter."""
+    if box is None: return True
+    low,high=root.find('streamingExtentsMin'),root.find('streamingExtentsMax')
+    if low is None or high is None: return True
+    try:
+        x0,y0=(float(low.get(k)) for k in 'xy')
+        x1,y1=(float(high.get(k)) for k in 'xy')
+    except (TypeError,ValueError): return True
+    if not all(np.isfinite(v) for v in (x0,y0,x1,y1)) or x0>x1 or y0>y1: return True
+    return x0<=box[2] and x1>=box[0] and y0<=box[3] and y1>=box[1]
+
+def active_ymap_paths(evidence):
+    paths=sorted({norm(p) for p in evidence['ymap'].values()})
+    if not paths: raise ValueError('Active CodeWalker YMAP selection is empty')
+    return paths
+
+def hd_placements(root, path):
+    result=[]
+    for index,item in enumerate(root.findall('entities/Item')):
+        if item.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
+        pos=item.find('position')
+        if pos is None: raise ValueError('HD placement has no position: '+path)
+        xyz=[float(pos.get(k)) for k in 'xyz']
+        if not all(np.isfinite(v) for v in xyz): raise ValueError('Nonfinite HD placement: '+path)
+        result.append({'map':path,'index':index,'name':item.findtext('archetypeName'),'position':xyz,'xml':ET.tostring(item,encoding='unicode')})
+    return result
+
 def plan(root, output, evidence_file='codewalker-selection-01.json', bbox=None):
     evidence=json.loads((root/evidence_file).read_text())
     snapshot=Path(json.loads((root/'catalog/bootstrap.json').read_text())['snapshot'])
     records={r['path']:r for r in map(json.loads,(snapshot/'inventory.jsonl').read_text().splitlines())}
-    maps=[norm(p) for p in evidence['ymap'].values() if any(x in p.lower() for x in ('scentral','koreatown','downtown_01'))]
+    maps=active_ymap_paths(evidence)
     def read(path):
         r=records[path]; data=(snapshot/r['xml']).read_bytes()
         if hashlib.sha256(data).hexdigest()!=r['xml_sha256']: raise ValueError('Changed metadata: '+path)
         return ET.fromstring(safe_metadata(data))
     def placements(path):
-        result=[]
-        for index,item in enumerate(read(path).findall('entities/Item')):
-            if item.findtext('lodLevel') not in ('LODTYPES_DEPTH_HD','LODTYPES_DEPTH_ORPHANHD'): continue
-            pos=item.find('position'); xyz=[float(pos.get(k)) for k in 'xyz']
-            if -850<=xyz[0]<=450 and -2000<=xyz[1]<=-900:
-                result.append({'map':path,'index':index,'name':item.findtext('archetypeName'),'position':xyz,'xml':ET.tostring(item,encoding='unicode')})
-        return result
+        map_root=read(path)
+        if not map_may_overlap(map_root,bbox): return []
+        return hd_placements(map_root,path)
     with ThreadPoolExecutor(max_workers=4) as pool: placed=[p for batch in pool.map(placements,maps) for p in batch]
     cells=defaultdict(list)
     for p in placed: cells[int(p['position'][0]//100),int(p['position'][1]//100)].append(p)
