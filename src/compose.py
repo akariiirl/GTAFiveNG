@@ -13,6 +13,46 @@ from region import fingerprints
 from selection import frame
 
 LEVEL='levels/los_santos_fazes'
+# Converter instances of the same YBN may differ by float formatting after
+# origin translation. Two positions may merge only within this absolute error.
+COLLISION_VERTEX_TOLERANCE_M=2e-5
+
+
+def collision_geometry(root):
+    """Return exact non-position XML and ordered world-space position arrays.
+
+    The XML includes triangle indices/winding, material bindings, geometry and
+    node structure. Clearing position text only for the fingerprint keeps
+    topology checks exact while permitting sub-millimetre coordinate noise.
+    """
+    arrays=[]; saved=[]
+    for node in root.findall('.//{*}source'):
+        if not node.get('id','').endswith('-positions'): continue
+        values=node.find('{*}float_array')
+        if values is None or values.text is None: raise ValueError('Collision positions missing')
+        array=np.fromstring(values.text,sep=' ')
+        if len(array)%3 or not np.isfinite(array).all(): raise ValueError('Invalid collision positions')
+        arrays.append(array)
+        saved.append((values,values.text)); values.text='__world_positions__'
+    if not arrays: raise ValueError('Collision geometry has no positions')
+    try: structure=hashlib.sha256(ET.tostring(root,encoding='utf-8')).digest()
+    finally:
+        for node,value in saved: node.text=value
+    return structure,arrays
+
+
+def collision_equivalent(left,right,tolerance=COLLISION_VERTEX_TOLERANCE_M):
+    if left[0]!=right[0] or len(left[1])!=len(right[1]): return False
+    return all(a.shape==b.shape and np.allclose(a,b,rtol=0,atol=tolerance)
+               for a,b in zip(left[1],right[1]))
+
+
+def collision_group(obj, source):
+    provenance=obj.get('sourceArchetype',source.stem)
+    # All object properties except transient name/path and validated zero
+    # position must agree, in addition to source identity and mesh geometry.
+    properties=digest({k:v for k,v in obj.items() if k not in ('name','shapeName','position','sourceArchetype')})
+    return provenance,properties
 
 def core_outputs(output):
     return {k:v for k,v in fingerprints(output).items() if k.startswith('levels/') or k in ('conversion_report.json','chunks.json','composed.zip','composed.manifest.json')}
@@ -50,6 +90,7 @@ def compose(builds, output, origin=None):
     shutil.copytree(first,level,ignore=shutil.ignore_patterns('art'))
     (level/'art/shapes').mkdir(parents=True); (level/'art/textures').mkdir()
     materials={}; objects={}; chunks={}; selections=[]; missing_assets=set(); missing_textures=set()
+    collision_sources={}; collision_deduplicated=0; collision_nonmatching=0
     for input_id,build,report,fingerprint in inputs:
         offset=np.array(report['origin'])-origin
         selections.append(report.get('selection',{'center':report['origin'][:2],'radius':report['radius']}))
@@ -92,12 +133,29 @@ def compose(builds, output, origin=None):
                         if not node.get('id','').endswith('-positions'): continue
                         array=node.find('{*}float_array'); values=np.fromstring(array.text,sep=' ').reshape(-1,3)+offset
                         array.text=' '.join(format(float(v),'.17g') for v in values.flat)
-                data=ET.tostring(root,encoding='utf-8',xml_declaration=True)
-                prefix='collision_' if collision else 'sc1_rd_r_' if source.stem.startswith('sc1_rd_r') else 'shape_'
-                name=prefix+hashlib.sha256(data).hexdigest()+'.dae'
-                target=level/'art/shapes'/name
-                if not target.exists(): target.write_bytes(data)
-                shape_paths[cache_key]='/'+LEVEL+'/art/shapes/'+name
+                equivalent_path=None
+                if collision:
+                    # Source stem encodes the exact exported resource filename;
+                    # never merge across different archive-path provenance.
+                    group=collision_group(obj,source)
+                    geometry=collision_geometry(root)
+                    for candidate_path in collision_sources.get(group,[]):
+                        # Re-read the canonical shape instead of retaining every
+                        # GTA collision vertex array in process memory.
+                        candidate_geometry=collision_geometry(ET.parse(output/candidate_path.lstrip('/')).getroot())
+                        if collision_equivalent(geometry,candidate_geometry):
+                            equivalent_path=candidate_path; collision_deduplicated+=1; break
+                    if equivalent_path is None and group in collision_sources: collision_nonmatching+=1
+                if equivalent_path is not None:
+                    shape_paths[cache_key]=equivalent_path
+                else:
+                    data=ET.tostring(root,encoding='utf-8',xml_declaration=True)
+                    prefix='collision_' if collision else 'sc1_rd_r_' if source.stem.startswith('sc1_rd_r') else 'shape_'
+                    name=prefix+hashlib.sha256(data).hexdigest()+'.dae'
+                    target=level/'art/shapes'/name
+                    if not target.exists(): target.write_bytes(data)
+                    shape_paths[cache_key]='/'+LEVEL+'/art/shapes/'+name
+                    if collision: collision_sources.setdefault(group,[]).append(shape_paths[cache_key])
             obj['shapeName']=shape_paths[cache_key]
             obj['sourceArchetype']=obj.get('sourceArchetype',source.stem)
             if collision: obj['position']=[0,0,0]
@@ -145,7 +203,9 @@ def compose(builds, output, origin=None):
     (level/'info.json').write_text(json.dumps(info,sort_keys=True,indent=2))
     report={'origin':origin.tolist(),'selection':{'regions':sorted(selections,key=lambda x:json.dumps(x,sort_keys=True))},'radius':float(np.linalg.norm(hi-lo)/2),
             'visual_instances':sum(o.get('collisionType')=='None' for o in objects.values()),'unique_drawables':len({o['shapeName'] for o in objects.values() if o.get('collisionType')=='None'}),
-            'visual_triangles':visual_count,'collision_triangles':collision_count,'missing_assets':sorted(missing_assets),'missing_textures':sorted(missing_textures),'in_game_verified':False}
+            'visual_triangles':visual_count,'collision_triangles':collision_count,'collision_deduplicated_instances':collision_deduplicated,
+            'collision_same_provenance_nonmatching_instances':collision_nonmatching,'collision_vertex_tolerance_m':COLLISION_VERTEX_TOLERANCE_M,
+            'missing_assets':sorted(missing_assets),'missing_textures':sorted(missing_textures),'in_game_verified':False}
     (output/'conversion_report.json').write_text(json.dumps(report,sort_keys=True,indent=2))
     (output/'chunks.json').write_text(json.dumps({k:{field:sorted(value) for field,value in record.items()} for k,record in sorted(chunks.items())},sort_keys=True,indent=2))
     validate(output); package(output,output/'composed.zip')
