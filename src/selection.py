@@ -28,6 +28,17 @@ def contains(config, xy):
 
 
 def frame(config):
+    if 'regions' in config:
+        regions=config['regions']
+        if not regions: raise ValueError('At least one region required')
+        boxes=[]
+        for region in regions:
+            center,_,size=frame(region)
+            boxes.append([center[0]-size[0]/2,center[1]-size[1]/2,
+                          center[0]+size[0]/2,center[1]+size[1]/2])
+        a=min(box[0] for box in boxes); b=min(box[1] for box in boxes)
+        c=max(box[2] for box in boxes); d=max(box[3] for box in boxes)
+        return [(a+c)/2,(b+d)/2], math.hypot(c-a,d-b)/2, [c-a,d-b]
     if 'bbox' in config:
         a,b,c,d = config['bbox']
         return [(a+c)/2,(b+d)/2], math.hypot(c-a,d-b)/2, [c-a,d-b]
