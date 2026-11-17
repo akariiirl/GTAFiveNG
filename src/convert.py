@@ -167,6 +167,20 @@ def drawable(xml, name, materials, textures, report):
             normal=normal/np.maximum(lengths,1e-12)
         uv=a[:,slice(*offsets['TexCoord0'])].copy() if 'TexCoord0' in offsets else None
         if uv is not None: uv[:,1]=1-uv[:,1]
+        # Omit only triangles that reference non-finite GTA vertex attributes.
+        finite=np.isfinite(v).all(axis=1)
+        if normal is not None: finite &= np.isfinite(normal).all(axis=1)
+        if uv is not None: finite &= np.isfinite(uv).all(axis=1)
+        if not finite.all():
+            keep=finite[idx].all(axis=1)
+            report['nonfinite_attribute_triangles_removed'] += int((~keep).sum())
+            idx=idx[keep]
+            if not len(idx): continue
+            used=np.unique(idx)
+            remap=np.full(len(v),-1,dtype=int); remap[used]=np.arange(len(used))
+            idx=remap[idx]; v=v[used]
+            if normal is not None: normal=normal[used]
+            if uv is not None: uv=uv[used]
         meshes.append({'v':v,'n':normal,'uv':uv,'i':idx,'material':mat})
     return meshes
 
@@ -226,7 +240,7 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_
     center,radius,region_size=frame(config)
     origin=np.array([center[0],center[1],0.]); level=output/'levels/los_santos_fazes'
     level.mkdir(parents=True,exist_ok=True)
-    report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'selection':config,'radius':radius,'in_game_verified':False}
+    report={'missing_assets':set(),'missing_textures':set(),'unsupported_collision':collections.Counter(),'degenerate_triangles_removed':0,'nonfinite_attribute_triangles_removed':0,'visual_instances':0,'collision_triangles':0,'visual_triangles':0,'source':'GTA V Legacy base archives','origin':origin.tolist(),'selection':config,'radius':radius,'in_game_verified':False}
     texture_catalog=TextureCatalog(source)
     drawables, report['dependency_resolution'] = resolve(source)
     materials={}; objects=[]; converted={}; used=set(); local_bounds={}

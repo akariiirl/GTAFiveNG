@@ -16,7 +16,7 @@ def is_drivable_road(name):
     name=name.lower()
     if not is_road_asset(name) or any(x in name for x in ('_ovly','_detail','_dcl','decal','_props','_fur')):
         return False
-    return name.startswith('sc1_rd_r') or bool(re.search(r'_rd\d*_r\d|_rd_\d+_r\d|_rd_\d+$|_road_r\d',name))
+    return name.startswith('sc1_rd_r') or bool(re.search(r'_rd\d*_r\d|_rd_\d+_r\d|_rd_\d+_\d+(?:$|_)|_rd_\d+$|_road_r\d',name))
 
 def triangles(path):
     root=ET.parse(path)
