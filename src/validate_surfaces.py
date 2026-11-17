@@ -1,14 +1,22 @@
 """Compare sampled original visual road surfaces against converted collision triangles."""
 from pathlib import Path
-import argparse,json,math
+import argparse,json,math,re
 import xml.etree.ElementTree as ET
 import numpy as np
 from collections import defaultdict
 
 NS={'c':'http://www.collada.org/2005/11/COLLADASchema'}
 
+def is_road_asset(name):
+    name=name.lower()
+    if name.startswith('prop_') or 'shadow' in name: return False
+    return name.startswith('sc1_rd_r') or bool(re.search(r'_rd\d*_r\d|_rd_\d+|_road',name))
+
 def is_drivable_road(name):
-    return name.startswith('sc1_rd_r') and 'shadow' not in name.lower()
+    name=name.lower()
+    if not is_road_asset(name) or any(x in name for x in ('_ovly','_detail','_dcl','decal','_props','_fur')):
+        return False
+    return name.startswith('sc1_rd_r') or bool(re.search(r'_rd\d*_r\d|_rd_\d+_r\d|_rd_\d+$|_road_r\d',name))
 
 def triangles(path):
     root=ET.parse(path)

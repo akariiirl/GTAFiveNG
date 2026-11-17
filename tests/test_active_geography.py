@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from selected_region import active_ymap_paths, hd_placements, map_may_overlap, overlaps_placement
-from validate_surfaces import is_drivable_road
+from validate_surfaces import is_drivable_road,is_road_asset
 
 
 class ActiveGeographyTests(unittest.TestCase):
@@ -41,6 +41,16 @@ class ActiveGeographyTests(unittest.TestCase):
     def test_shadow_geometry_is_not_a_drivable_road(self):
         self.assertTrue(is_drivable_road('sc1_rd_r3_12'))
         self.assertFalse(is_drivable_road('sc1_rd_rnd_tun02_shadow'))
+
+    def test_downtown_and_freeway_road_names(self):
+        self.assertTrue(is_road_asset('dt1_rd1_r1_02'))
+        self.assertTrue(is_drivable_road('dt1_rd1_r1_02'))
+        self.assertTrue(is_road_asset('fwy_01_rd_14'))
+        self.assertTrue(is_drivable_road('fwy_01_rd_14'))
+        self.assertTrue(is_road_asset('kt1_rd_02_r3e'))
+        self.assertTrue(is_drivable_road('kt1_rd_02_r3e'))
+        self.assertFalse(is_drivable_road('dt1_rd1_r1_ovly_07'))
+        self.assertFalse(is_road_asset('prop_sign_road_01a'))
 
 
 if __name__=='__main__': unittest.main()
