@@ -20,6 +20,13 @@ ordinary BeamNG material approximates the blend by choosing one dominant layer
 per triangle. It does not reproduce four-layer interpolation or masked shader
 variants exactly. No TerrainBlock or synthetic height field is introduced.
 
+Terrain update (2026-11-17): dominant-layer choice integrates the bilinear GTA
+vertex colour weights across each triangle. Where an archetype has no texture
+dictionary, exact four-layer shader/sampler matches in the same prepared source
+folder may supply textures only when all matching donor content hashes agree.
+Ambiguous or missing bindings remain diagnostic. This improves source-texture
+coverage without changing cell membership, terrain geometry or collision.
+
 Cloud additions (2026-11-16): `dependencies.py` indexes flat exported YDR/YFT XML,
 resolves basic YTYP `name` → `assetName` aliases, and reports ambiguous names and
 unresolved aliases in `dependency_resolution`. It deliberately does not guess

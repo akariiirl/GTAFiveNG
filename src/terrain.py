@@ -21,4 +21,15 @@ def layer_weights(colour):
 
 def triangle_layers(colour, indices):
     triangles = np.asarray(indices, dtype=int).reshape(-1, 3)
-    return np.argmax(layer_weights(colour)[triangles].mean(axis=1), axis=1)
+    # GTA blends using b, g and their product. Averaging vertex weights is not
+    # the same as integrating that bilinear product over a triangle.
+    channels = np.asarray(colour, dtype=float)[triangles]
+    if channels.ndim != 3 or channels.shape[2] != 4 or not np.isfinite(channels).all():
+        raise ValueError('Invalid GTA terrain vertex colours')
+    channels = np.clip(channels / 255, 0, 1)
+    b, g = channels[:, :, 2], channels[:, :, 1]
+    mean_b, mean_g = b.mean(axis=1), g.mean(axis=1)
+    mean_bg = ((b*g).sum(axis=1) + b.sum(axis=1)*g.sum(axis=1)) / 12
+    weights = np.stack((1-mean_b-mean_g+mean_bg, mean_b-mean_bg,
+                        mean_g-mean_bg, mean_bg), axis=1)
+    return np.argmax(weights, axis=1)

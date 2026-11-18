@@ -151,13 +151,55 @@ class TextureCatalog:
             else: self.diagnostics[name] = {'dictionary_conflict': sorted(choices)}
         self.legacy = {p.stem.lower(): {'path':p,'used':False} for p in sorted(source.glob('*.dds'))}
         self._hash = hashlib.sha256
+        self._terrain_shader_index = None
+
+    @staticmethod
+    def terrain_shader_signatures(path):
+        """Identify four-layer diffuse samplers without relying on asset names."""
+        root = ET.parse(path).getroot()
+        signatures = set()
+        for shader in root.findall('ShaderGroup/Shaders/Item'):
+            file = shader.findtext('FileName', '').lower()
+            if not (file.startswith('terrain_cb') and '4lyr' in file): continue
+            layers = tuple((shader.findtext("Parameters/Item[@name='TextureSampler_layer%d']/Name" % i) or '').lower() for i in range(4))
+            if all(layers): signatures.add((file, layers))
+        return signatures
+
+    def matching_terrain_bindings(self, asset):
+        """Infer only texture bytes shared by exact source-shader donor matches."""
+        target = sorted(self.source.glob('*.rpf_' + asset.lower() + '.ydr.xml'))
+        if len(target) != 1: return {}
+        signatures = self.terrain_shader_signatures(target[0])
+        if not signatures: return {}
+        if self._terrain_shader_index is None:
+            index = collections.defaultdict(set)
+            for path in sorted(self.source.glob('*.ydr.xml')):
+                if b'terrain_cb' not in path.read_bytes(): continue
+                name = path.name.split('.rpf_', 1)[-1].removesuffix('.ydr.xml').lower()
+                if name == asset or not self.asset_txds.get(name): continue
+                for signature in self.terrain_shader_signatures(path): index[signature].add(name)
+            self._terrain_shader_index = index
+        donors = sorted({name for signature in signatures for name in self._terrain_shader_index.get(signature, ())})
+        required = {name for _, layers in signatures for name in layers}
+        candidates = collections.defaultdict(dict)
+        for donor in donors:
+            for name, record in self.for_asset(donor).items():
+                if name in required:
+                    candidates[name][self._hash(record['path'].read_bytes()).hexdigest()] = record
+        result = {name: next(iter(choices.values())) for name, choices in candidates.items() if len(choices) == 1}
+        conflicts = sorted(name for name, choices in candidates.items() if len(choices) > 1)
+        self.diagnostics.setdefault(asset, {}).update(
+            matching_shader_donors=donors, inferred_terrain_textures=sorted(result),
+            ambiguous_terrain_textures=conflicts,
+            missing_terrain_textures=sorted(required - result.keys()))
+        return result
 
     def for_asset(self, asset):
         if not self.enabled: return self.legacy
         txd = self.asset_txds.get(asset.lower())
         if not txd:
             self.diagnostics.setdefault(asset, {}).update(missing_dictionary=True)
-            return {}
+            return self.matching_terrain_bindings(asset)
         names = set()
         current = txd; seen = set()
         while current and current not in seen:
