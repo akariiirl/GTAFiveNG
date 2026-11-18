@@ -3,11 +3,13 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import json
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'src'))
 from convert import drawable
 from terrain import triangle_layers
 from terrain_package import terrain_geometry
+from dependencies import TextureCatalog
 import xml.etree.ElementTree as ET
 
 
@@ -16,6 +18,11 @@ class TerrainTests(unittest.TestCase):
         import numpy as np
         colours=np.array([[0,0,0,255],[0,0,255,255],[0,255,0,255],[0,255,255,255]])
         self.assertEqual(triangle_layers(colours,[[0,0,0],[1,1,1],[2,2,2],[3,3,3]]).tolist(),[0,1,2,3])
+
+    def test_triangle_uses_integrated_four_layer_weights(self):
+        import numpy as np
+        colours=np.array([[0,60,204,255],[0,81,15,255],[0,204,37,255]])
+        self.assertEqual(triangle_layers(colours,[[0,1,2]]).tolist(),[0])
 
     def test_layered_mesh_preserves_triangles_and_uv(self):
         names=''.join('<Item name="TextureSampler_layer%d"><Name>layer%d</Name></Item>'%(i,i) for i in range(4))
@@ -54,6 +61,29 @@ class TerrainTests(unittest.TestCase):
         geometry.find('VertexBuffer/Layout/Colour1').clear()
         geometry.find('VertexBuffer/Layout').remove(geometry.find('VertexBuffer/Layout/Colour1'))
         self.assertIsNone(terrain_geometry(geometry,shader))
+
+    def test_missing_dictionary_uses_only_identical_shader_donors(self):
+        shader=('<Drawable><ShaderGroup><Shaders><Item><FileName>terrain_cb_w_4lyr.sps</FileName><Parameters>'+
+                ''.join('<Item name="TextureSampler_layer%d"><Name>layer%d</Name></Item>'%(i,i) for i in range(4))+
+                '</Parameters></Item></Shaders></ShaderGroup></Drawable>')
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for name in ('target','donor','conflict'):
+                (root/('base.rpf_'+name+'.ydr.xml')).write_text(shader)
+            for index in range(4): (root/('layer%d.dds'%index)).write_bytes(bytes([index]))
+            (root/'different.dds').write_bytes(b'different')
+            policy={'scoped_textures':True,'asset_txds':{'donor':'good','conflict':'other'},
+                    'textures':{'good':{'layer%d'%i:'layer%d.dds'%i for i in range(4)},
+                                'other':{'layer%d'%i:'layer%d.dds'%i for i in range(4)}}}
+            (root/'dependency-policy.json').write_text(json.dumps(policy))
+            catalog=TextureCatalog(root)
+            self.assertEqual(set(catalog.for_asset('target')),{'layer0','layer1','layer2','layer3'})
+            self.assertEqual(catalog.diagnostics['target']['matching_shader_donors'],['conflict','donor'])
+            policy['textures']['other']['layer2']='different.dds'
+            (root/'dependency-policy.json').write_text(json.dumps(policy))
+            catalog=TextureCatalog(root)
+            self.assertNotIn('layer2',catalog.for_asset('target'))
+            self.assertEqual(catalog.diagnostics['target']['ambiguous_terrain_textures'],['layer2'])
 
 
 if __name__=='__main__': unittest.main()
