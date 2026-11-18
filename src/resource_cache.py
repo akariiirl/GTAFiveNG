@@ -75,13 +75,19 @@ def cached_drawable(cache, xml, name, materials, textures, report, convert):
                  'missing_textures':sorted(local_report['missing_textures']),
                  'skipped_skinned_models':sorted(local_report.get('skipped_skinned_models',set())),
                  'degenerate_triangles_removed':local_report['degenerate_triangles_removed'],
-                 'nonfinite_attribute_triangles_removed':local_report['nonfinite_attribute_triangles_removed']}
+                 'nonfinite_attribute_triangles_removed':local_report['nonfinite_attribute_triangles_removed'],
+                 'terrain_layered_triangles':local_report.get('terrain_layered_triangles',0),
+                 'terrain_textured_triangles':local_report.get('terrain_textured_triangles',0),
+                 'terrain_unresolved':sorted(local_report.get('terrain_unresolved',set()))}
         cache.put(key,entry)
     materials.update(entry['materials'])
     for key in entry['used_textures']: textures[key]['used'] = True
     report['missing_textures'].update(entry['missing_textures'])
     report['degenerate_triangles_removed'] += entry['degenerate_triangles_removed']
     report['nonfinite_attribute_triangles_removed'] = report.get('nonfinite_attribute_triangles_removed',0) + entry.get('nonfinite_attribute_triangles_removed',0)
+    for metric in ('terrain_layered_triangles','terrain_textured_triangles'):
+        if entry.get(metric): report[metric] = report.get(metric,0) + entry[metric]
+    if entry.get('terrain_unresolved'): report.setdefault('terrain_unresolved',set()).update(entry['terrain_unresolved'])
     if entry['skipped_skinned_models']: report.setdefault('skipped_skinned_models',set()).update(entry['skipped_skinned_models'])
     return [{k:np.asarray(v,dtype=int if k=='i' else float) if k in ('v','i','n','uv') and v is not None else v for k,v in mesh.items()} for mesh in entry['meshes']]
 

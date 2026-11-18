@@ -8,6 +8,7 @@ from selection import selection, contains, frame
 from lod import simplify, validate_settings
 from resource_cache import cached_drawable, cached_collision, cached_texture
 from dependencies import resolve, TextureCatalog
+from terrain import is_layered_terrain, triangle_layers
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = 'http://www.collada.org/2005/11/COLLADASchema'
@@ -148,17 +149,6 @@ def drawable(xml, name, materials, textures, report):
         ix=np.fromstring(g.findtext('IndexBuffer/Data',''),sep=' ',dtype=int)
         idx,deg=valid_mesh(v,ix); report['degenerate_triangles_removed']+=deg
         si=int(value(g,'ShaderIndex')); shader=shaders[si]; mat='lsf_'+name+'_'+str(si)
-        if mat not in materials:
-            tex=shader.findtext("Parameters/Item[@name='DiffuseSampler']/Name")
-            stage={'diffuseColor':[1,1,1,1],'specularPower':16,'useAnisotropic':True}
-            if tex and tex.lower() in textures:
-                target=textures[tex.lower()].get('target',tex.lower()+'.dds'); stage['diffuseMap']='/levels/los_santos_fazes/art/textures/'+target
-                textures[tex.lower()]['used']=True
-            elif tex: report['missing_textures'].add(tex)
-            materials[mat]={'name':mat,'class':'Material','mapTo':mat,'Stages':[stage],'doubleSided':True}
-            if any(s in shader.findtext('FileName','') for s in ('cutout','trees','foliage')):
-                materials[mat].update(alphaTest=True,alphaRef=100)
-            if shader.findtext('Name','')=='decal': materials[mat].update(translucent=True,translucentBlendOp='Lerp',translucentZWrite=False)
         normal=a[:,offsets['Normal'][0]:offsets['Normal'][0]+3] if 'Normal' in offsets else None
         v=v@transform[:,:3].T+transform[:,3]
         if normal is not None:
@@ -181,7 +171,33 @@ def drawable(xml, name, materials, textures, report):
             idx=remap[idx]; v=v[used]
             if normal is not None: normal=normal[used]
             if uv is not None: uv=uv[used]
-        meshes.append({'v':v,'n':normal,'uv':uv,'i':idx,'material':mat})
+            if 'Colour1' in offsets: a=a[used]
+        shader_file=shader.findtext('FileName','').lower()
+        layer_names=[shader.findtext("Parameters/Item[@name='TextureSampler_layer%d']/Name" % layer) for layer in range(4)]
+        layered=is_layered_terrain(shader_file) and 'Colour1' in offsets and uv is not None and all(layer_names)
+        groups=[(None,idx)]
+        if layered:
+            chosen=triangle_layers(a[:,slice(*offsets['Colour1'])],idx)
+            groups=[(layer,idx[chosen==layer]) for layer in range(4) if np.any(chosen==layer)]
+            report['terrain_layered_triangles']=report.get('terrain_layered_triangles',0)+len(idx)
+        elif is_layered_terrain(shader_file):
+            report.setdefault('terrain_unresolved',set()).add(name+':'+str(si))
+        for layer,faces in groups:
+            material=mat if layer is None else mat+'_terrain_'+str(layer)
+            if material not in materials:
+                tex=layer_names[layer] if layer is not None else shader.findtext("Parameters/Item[@name='DiffuseSampler']/Name")
+                stage={'diffuseColor':[1,1,1,1],'specularPower':16,'useAnisotropic':True}
+                if tex and tex.lower() in textures:
+                    target=textures[tex.lower()].get('target',tex.lower()+'.dds'); stage['diffuseMap']='/levels/los_santos_fazes/art/textures/'+target
+                    textures[tex.lower()]['used']=True
+                elif tex: report['missing_textures'].add(tex)
+                materials[material]={'name':material,'class':'Material','mapTo':material,'Stages':[stage],'doubleSided':True}
+                if any(s in shader_file for s in ('cutout','trees','foliage')):
+                    materials[material].update(alphaTest=True,alphaRef=100)
+                if shader.findtext('Name','')=='decal': materials[material].update(translucent=True,translucentBlendOp='Lerp',translucentZWrite=False)
+            if layer is not None and 'diffuseMap' in materials[material]['Stages'][0]:
+                report['terrain_textured_triangles']=report.get('terrain_textured_triangles',0)+len(faces)
+            meshes.append({'v':v,'n':normal,'uv':uv,'i':faces,'material':material})
     return meshes
 
 def bounds_mesh(xml,origin,report):
@@ -311,7 +327,7 @@ def build(source,output,center=None,radius=None,bbox=None,shared_cache=None,lod_
     jsonl(level/'main/MissionGroup/Geometry/items.level.json',objects)
     jsonl(level/'main/MissionGroup/PlayerDropPoints/items.level.json',[{'name':'spawn_default','class':'SpawnSphere','__parent':'PlayerDropPoints','position':[100,50,31],'radius':5,'dataBlock':'SpawnSphereMarker'}])
     jsonl(level/'main/MissionGroup/Sky/items.level.json',[{'name':'theLevelInfo','class':'LevelInfo','__parent':'Sky','globalEnviromentMap':'BNG_Sky_01_cubemap','gravity':-9.81,'visibleDistance':2500,'fogDensity':0.0001}, {'name':'sunsky','class':'ScatterSky','__parent':'Sky','skyBrightness':40,'azimuth':90,'elevation':45}, {'name':'tod','class':'TimeOfDay','__parent':'Sky','time':0.15,'play':False}])
-    for k in ['missing_assets','missing_textures','skipped_skinned_models']:
+    for k in ['missing_assets','missing_textures','skipped_skinned_models','terrain_unresolved']:
         if k in report: report[k]=sorted(report[k])
     report['texture_resolution']={'scoped':bool(texture_catalog.enabled),'diagnostics':texture_catalog.diagnostics}
     report['textures']=len(texture_catalog.used_records()); report['unique_drawables']=len(converted)
